@@ -1,2 +1,2 @@
 date,bsti_0_100,bsti_raw_score,bsti_regime,stress_breadth,active_pressure_channels,dominant_pressure_channel,dominant_pressure_value,top_channel_1,top_channel_1_value,top_channel_2,top_channel_2_value,top_channel_3,top_channel_3_value
-2026-06-08,31.329986913823333,0.9398996074146999,fragile,0.3333333333333333,2,fx_pressure,2.826063713619045,fx_pressure,2.826063713619045,brazil_drawdown_pressure,1.9649533726030972,external_brazil_pressure,0.614996879256118
+2026-06-08,30.41725633685224,0.9125176901055672,fragile,0.3333333333333333,2,fx_pressure,2.643517598224829,fx_pressure,2.643517598224829,brazil_drawdown_pressure,1.9649533726030972,external_brazil_pressure,0.6149968792561163
