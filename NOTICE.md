@@ -6,4 +6,7 @@ Preferred citation:
 
 > Pereira, Rodolfo. (2026). *BRAVO Lab: Brazilian Risk, Allocation, Volatility & Options Lab*. ShockBridge Pulse Research. Python research software. https://github.com/rolffcoelho-bravo/bravo-lab
 
-Please cite BRAVO Lab if you use its code, methodology, diagnostics, research structure, analytical framework, or derived work in academic research, professional reports, presentations, repositories, or publications.
+Please cite BRAVO Lab if you use its code, methodology, diagnostics, research structure, analytical framework, Brazil Stress Transmission Index, derivatives-overlay logic, or derived work in academic research, professional reports, presentations, repositories, or publications.
+
+Author: Rodolfo Pereira
+Research brand: ShockBridge Pulse Research
