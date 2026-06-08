@@ -175,10 +175,11 @@ def _add_source_note(fig, note: str) -> None:
 def _save(fig, path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    try:
+    # The executive dashboard uses manually positioned card axes.
+    # Calling tight_layout on that figure creates harmless warning noise,
+    # so layout is only tightened for standard chart figures.
+    if "executive_risk_dashboard" not in path.name:
         fig.tight_layout(rect=[0, 0.035, 1, 1])
-    except Exception:
-        pass
 
     fig.savefig(path, dpi=260, bbox_inches="tight")
     plt.close(fig)
