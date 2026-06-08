@@ -20,6 +20,14 @@ The fastest way to review the project is:
 3. Inspect the full baseline report.
 4. Verify the generated CSV outputs in `data/processed/`.
 
+## Visual Proof
+
+![BRAVO Lab Executive Risk Dashboard](reports/figures/00_executive_risk_dashboard.png)
+
+The dashboard above is generated automatically from the reproducible BRAVO Lab pipeline. It summarizes the latest Brazil stress state, dominant pressure channel, portfolio policy action, and active-risk leaders.
+
+
+
 
 BRAVO Lab is a Python research pipeline for transforming Brazilian market volatility, derivatives overlays, contagion signals, and dynamic risk regimes into portfolio-grade analytical reports.
 
