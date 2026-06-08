@@ -1,9 +1,10 @@
+
 """
 Institutional report generation for BRAVO Lab.
 
 This module turns the BRAVO Lab baseline pipeline into a decision memo:
-market state, data provenance, regime diagnosis, overlay trade-off, results SWOT,
-decision bias, model limits, and next risk signals.
+market state, data provenance, regime diagnosis, overlay trade-off, active risk,
+results SWOT, decision bias, model limits, and next risk signals.
 
 The report is written for portfolio review. It is not a trading recommendation.
 """
@@ -198,16 +199,128 @@ def _overlay_table_to_markdown(summary: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
+def _active_risk_summary(
+    overlay_returns: pd.DataFrame,
+    periods_per_year: float,
+    benchmark_column: str = "passive_brazil_equity",
+) -> pd.DataFrame:
+    """
+    Calculate active risk diagnostics versus passive Brazilian equity.
+
+    The purpose is to avoid judging overlays only by absolute return.
+    A portfolio desk needs to know whether the active deviation from the
+    benchmark is compensated.
+    """
+    if benchmark_column not in overlay_returns.columns:
+        raise KeyError(f"Benchmark column not found: {benchmark_column}")
+
+    benchmark = overlay_returns[benchmark_column].dropna()
+    rows = []
+
+    for column in overlay_returns.columns:
+        if column == benchmark_column:
+            continue
+
+        aligned = pd.concat(
+            {
+                "strategy": overlay_returns[column],
+                "benchmark": benchmark,
+            },
+            axis=1,
+        ).dropna()
+
+        if aligned.empty:
+            rows.append(
+                {
+                    "strategy": column,
+                    "annualized_active_return": np.nan,
+                    "tracking_error": np.nan,
+                    "information_ratio": np.nan,
+                    "hit_rate_vs_benchmark": np.nan,
+                    "downside_hit_rate": np.nan,
+                    "avg_active_return": np.nan,
+                    "worst_active_period": np.nan,
+                    "observations": 0,
+                }
+            )
+            continue
+
+        active = aligned["strategy"] - aligned["benchmark"]
+        active_return = active.mean() * periods_per_year
+        tracking_error = active.std() * np.sqrt(periods_per_year)
+
+        information_ratio = np.nan
+        if tracking_error != 0 and not np.isnan(tracking_error):
+            information_ratio = active_return / tracking_error
+
+        hit_rate = (aligned["strategy"] > aligned["benchmark"]).mean()
+
+        downside_periods = aligned[aligned["benchmark"] < 0]
+        downside_hit_rate = np.nan
+        if not downside_periods.empty:
+            downside_hit_rate = (
+                downside_periods["strategy"] > downside_periods["benchmark"]
+            ).mean()
+
+        rows.append(
+            {
+                "strategy": column,
+                "annualized_active_return": active_return,
+                "tracking_error": tracking_error,
+                "information_ratio": information_ratio,
+                "hit_rate_vs_benchmark": hit_rate,
+                "downside_hit_rate": downside_hit_rate,
+                "avg_active_return": active.mean(),
+                "worst_active_period": active.min(),
+                "observations": len(aligned),
+            }
+        )
+
+    return pd.DataFrame(rows).set_index("strategy")
+
+
+def _active_risk_to_markdown(active_summary: pd.DataFrame) -> str:
+    headers = [
+        "Strategy",
+        "Ann. Active Return",
+        "Tracking Error",
+        "Information Ratio",
+        "Hit Rate",
+        "Downside Hit Rate",
+        "Worst Active Period",
+        "Obs.",
+    ]
+
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+
+    for strategy, row in active_summary.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(strategy),
+                    _format_percentage(row["annualized_active_return"]),
+                    _format_percentage(row["tracking_error"]),
+                    _format_number(row["information_ratio"]),
+                    _format_percentage(row["hit_rate_vs_benchmark"]),
+                    _format_percentage(row["downside_hit_rate"]),
+                    _format_percentage(row["worst_active_period"]),
+                    str(int(row["observations"])),
+                ]
+            )
+            + " |"
+        )
+
+    return "\n".join(lines)
+
+
 def _data_provenance_table(
     prices: pd.DataFrame,
     returns: pd.DataFrame,
 ) -> pd.DataFrame:
-    """
-    Build a data provenance table.
-
-    The objective is to separate real market data, derived metrics,
-    model-generated signals, and synthetic derivatives assumptions.
-    """
     rows = []
 
     for label, ticker in TICKERS.items():
@@ -328,9 +441,6 @@ def _data_provenance_table(
 
 
 def _data_provenance_to_markdown(provenance: pd.DataFrame) -> str:
-    """
-    Convert data provenance table into a compact markdown table.
-    """
     headers = [
         "Layer",
         "Item",
@@ -479,18 +589,18 @@ The purpose is simple: separate what the model already shows from what still nee
 
 | Dimension | Current Reading | Portfolio Meaning |
 | --- | --- | --- |
-| Strengths | The report connects market state, regime classification, risk metrics, and synthetic overlay performance in one reproducible pipeline. | The decision maker can compare passive exposure, covered call income, and collar protection under the same data window instead of reading each strategy in isolation. |
+| Strengths | The report connects market state, regime classification, risk metrics, synthetic overlay performance, and active risk diagnostics in one reproducible pipeline. | The decision maker can compare passive exposure, covered call income, collar protection, and stress-aware switching under the same data window instead of reading each strategy in isolation. |
 | Weaknesses | The overlay premiums are synthetic. Real B3 option-chain behavior, liquidity, spreads, taxes, and execution costs are not yet included. | The current ranking should not be treated as live tradable evidence. It is a research signal that needs market microstructure validation. |
-| Opportunities | The framework creates a path toward regime-aware overlay allocation. It can evolve from static comparison into a decision engine that changes exposure as volatility and drawdown conditions shift. | The strongest future use is not picking one permanent strategy. The value is learning when to hold beta, harvest premium, or buy protection. |
-| Threats | The model can overstate strategy quality if synthetic option prices are too clean, if transaction costs are ignored, or if full-sample performance hides stress-period failure. | The main risk is false confidence. A premium-looking result becomes dangerous if it is not tested across stress windows, costs, and real option data. |
+| Opportunities | The framework creates a path toward regime-aware overlay allocation with active-risk discipline. It can evolve from static comparison into a decision engine that changes exposure as volatility and drawdown conditions shift. | The strongest future use is not picking one permanent strategy. The value is learning when to hold beta, harvest premium, buy protection, or accept active risk. |
+| Threats | The model can overstate strategy quality if synthetic option prices are too clean, if transaction costs are too low, or if full-sample performance hides stress-period failure. | The main risk is false confidence. A premium-looking result becomes dangerous if it is not tested across stress windows, costs, tracking error, and real option data. |
 
 ### SWOT Interpretation
 
-The main strength is integration. The report does not leave the portfolio reviewer with isolated metrics. It links regime, risk, and overlay behavior.
+The main strength is integration. The report does not leave the portfolio reviewer with isolated metrics. It links regime, risk, overlay behavior, and active deviation from the benchmark.
 
 The main weakness is tradability. Synthetic option pricing is useful for building the research engine, but it is not enough for real portfolio deployment.
 
-The main opportunity is regime switching. A static covered call or collar strategy is too rigid for Brazilian markets. The more valuable question is when the book should shift from participation to income to protection.
+The main opportunity is regime switching with active-risk control. A static covered call or collar strategy is too rigid for Brazilian markets. The more valuable question is when the book should shift from participation to income to protection without taking unrewarded tracking error.
 
 The main threat is clean-model illusion. A strategy can look strong before costs, spreads, liquidity, and stress subperiods. The next version must attack that weakness directly."""
 
@@ -505,11 +615,12 @@ def _report_structure() -> str:
 | 5 | Regime Diagnosis | Volatility, drawdown, and current regime |
 | 6 | Baseline Risk Metrics | Return, risk, Sharpe, drawdown, VaR, CVaR |
 | 7 | Synthetic Overlay Results | Passive versus covered call versus collar versus stress-aware overlay |
-| 8 | Overlay Decision Matrix | When each strategy is useful or dangerous |
-| 9 to 10 | Results SWOT | How to cope with the signal before portfolio action |
-| 11 | ShockBridge Transmission Read | How stress moves into the book |
-| 12 | What To Watch Next | Confirmation signals and warning signals |
-| 13 | Model Limits and Evidence Files | What is proven, what is not, and what comes next |"""
+| 8 | Active Risk Diagnostics | Tracks active return, tracking error, hit rate, and information ratio |
+| 9 | Overlay Decision Matrix | When each strategy is useful or dangerous |
+| 10 to 11 | Results SWOT | How to cope with the signal before portfolio action |
+| 12 | ShockBridge Transmission Read | How stress moves into the book |
+| 13 | What To Watch Next | Confirmation signals and warning signals |
+| 14 | Model Limits and Evidence Files | What is proven, what is not, and what comes next |"""
 
 
 def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
@@ -545,17 +656,25 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
         periods_per_year=periods_per_year,
     )
 
+    active_risk_summary = _active_risk_summary(
+        overlay_returns=overlay_returns,
+        periods_per_year=periods_per_year,
+        benchmark_column="passive_brazil_equity",
+    )
+
     performance_summary_path = PROCESSED_DATA_DIR / "baseline_performance_summary.csv"
     regime_table_path = PROCESSED_DATA_DIR / "brazil_equity_regime_table.csv"
     overlay_returns_path = PROCESSED_DATA_DIR / "overlay_return_table.csv"
     overlay_summary_path = PROCESSED_DATA_DIR / "overlay_performance_summary.csv"
     data_provenance_path = PROCESSED_DATA_DIR / "data_provenance_table.csv"
+    active_risk_path = PROCESSED_DATA_DIR / "active_risk_summary.csv"
 
     performance_summary.to_csv(performance_summary_path)
     regime_table.to_csv(regime_table_path)
     overlay_returns.to_csv(overlay_returns_path)
     overlay_summary.to_csv(overlay_summary_path)
     data_provenance.to_csv(data_provenance_path, index=False)
+    active_risk_summary.to_csv(active_risk_path)
 
     start_date = data.prices.index.min().date()
     end_date = data.prices.index.max().date()
@@ -569,6 +688,7 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     best_drawdown = _safe_idxmax(overlay_summary, "max_drawdown")
     best_sharpe = _safe_idxmax(overlay_summary, "sharpe_ratio")
     worst_drawdown = _safe_idxmin(overlay_summary, "max_drawdown")
+    best_information_ratio = _safe_idxmax(active_risk_summary, "information_ratio")
 
     decision_bias = _decision_bias(latest_regime, latest_drawdown, overlay_summary)
     shockbridge_signal = _shockbridge_signal(
@@ -586,7 +706,7 @@ Generated at: **{generated_at}**
 
 Data window: **{start_date} to {end_date}**
 
-Target report length: **11 to 13 PDF pages**
+Target report length: **12 to 14 PDF pages**
 
 ## 1. Executive Signal
 
@@ -598,6 +718,8 @@ Target report length: **11 to 13 PDF pages**
 
 **Decision bias:** {decision_bias}
 
+**Best information ratio versus passive:** `{best_information_ratio}`
+
 {shockbridge_signal}
 
 ## 2. Report Map
@@ -606,16 +728,18 @@ Target report length: **11 to 13 PDF pages**
 
 ## 3. Portfolio Question
 
-The core question is not whether passive equity, covered calls, or collars are
-better in isolation. The correct question is regime-dependent.
+The core question is not whether passive equity, covered calls, collars, or
+stress-aware switching are better in isolation. The correct question is
+regime-dependent.
 
 When Brazilian equity risk changes state, should the portfolio keep full beta,
-sell volatility through covered calls, or pay for downside protection through
-collars?
+sell volatility through covered calls, pay for downside protection through
+collars, or switch exposure based on regime evidence?
 
 This report gives the first reproducible answer. It measures the market state,
-classifies the volatility and drawdown regime, compares synthetic overlays, and
-turns the result into a portfolio decision frame.
+classifies the volatility and drawdown regime, compares synthetic overlays,
+calculates active risk versus passive Brazilian equity, and turns the result
+into a portfolio decision frame.
 
 ## 4. Market State
 
@@ -701,11 +825,23 @@ annualized using **{periods_per_year:.1f} periods per year**.
 
 {_overlay_table_to_markdown(overlay_summary)}
 
-## 9. Overlay Decision Matrix
+## 9. Active Risk Diagnostics
+
+Absolute return is not enough. A portfolio desk also needs to know whether the
+overlay earns enough to justify its deviation from passive Brazilian equity.
+
+Tracking error measures how far the overlay moves away from passive exposure.
+The information ratio tests whether that active deviation is rewarded. Hit rate
+shows how often the overlay beats passive. Downside hit rate is stricter. It
+asks whether the overlay helps when passive exposure is already losing money.
+
+{_active_risk_to_markdown(active_risk_summary)}
+
+## 10. Overlay Decision Matrix
 
 {_strategy_decision_matrix()}
 
-## 10. Strategy Trade-Off
+## 11. Strategy Trade-Off
 
 **Best annualized return:** `{best_return}`
 
@@ -713,23 +849,27 @@ annualized using **{periods_per_year:.1f} periods per year**.
 
 **Best Sharpe profile:** `{best_sharpe}`
 
+**Best information ratio versus passive:** `{best_information_ratio}`
+
 **Weakest drawdown profile:** `{worst_drawdown}`
 
 The decision is not to chase the highest return. The decision is to match the
-overlay to the regime.
+overlay to the regime and check whether active risk is rewarded.
 
 Passive equity keeps the cleanest upside but carries the full left tail. Covered
 calls convert part of upside into premium income, which can help in sideways or
 moderately volatile markets. Collars give the book a defined protection logic,
 but their cost and upside cap must be justified by the current risk state.
+Stress-aware switching adds discipline, but only if the regime signal is stable
+enough to avoid unnecessary turnover.
 
-## 11. Results SWOT
+## 12. Results SWOT
 
 How to cope with the signal before turning it into a portfolio action.
 
 {_results_swot()}
 
-## 12. ShockBridge Transmission Read
+## 13. ShockBridge Transmission Read
 
 Brazilian equity does not trade in isolation. The book can be hit through local
 rates, fiscal repricing, FX pressure, global volatility, commodity shocks, and
@@ -743,7 +883,7 @@ The key insight is simple: volatility is not only a number. It is a carrier of
 stress. When volatility rises with drawdown, the book is not just moving. It is
 absorbing transmission.
 
-## 13. What To Watch Next
+## 14. What To Watch Next
 
 {watch_next}
 
@@ -751,7 +891,7 @@ The next model version should not simply add complexity. It should improve the
 decision. The immediate test is whether transaction costs, tracking error, and
 stress subperiod performance confirm or weaken the current overlay ranking.
 
-## 14. What Would Break This View
+## 15. What Would Break This View
 
 This baseline view should be challenged if one of the following happens:
 
@@ -761,8 +901,10 @@ This baseline view should be challenged if one of the following happens:
 4. The collar improves drawdown but destroys too much participation.
 5. The covered call improves income but systematically sells the strongest rebounds.
 6. The model performs well in the full sample but fails in stress subperiods.
+7. The information ratio is positive in the full sample but weak during stress windows.
+8. Tracking error rises without clear drawdown reduction or active return compensation.
 
-## 15. Model Limits and Governance
+## 16. Model Limits and Governance
 
 This report is intentionally clear about what it does not prove.
 
@@ -772,26 +914,28 @@ This report is intentionally clear about what it does not prove.
 - Transaction costs, taxes, spreads, and liquidity constraints are not included yet.
 - GARCH and MTV-GARCH are not yet active in this report.
 - The regime classifier is transparent but not final.
+- Active risk diagnostics are useful but still require stress-window validation.
 - This is research infrastructure, not investment advice.
 
-## 16. Generated Evidence Files
+## 17. Generated Evidence Files
 
 - `{performance_summary_path}`
 - `{regime_table_path}`
 - `{overlay_returns_path}`
 - `{overlay_summary_path}`
 - `{data_provenance_path}`
+- `{active_risk_path}`
 - `{output_path}`
 
-## 17. Next Upgrade
+## 18. Next Upgrade
 
-The next upgrade should turn this from a static overlay comparison into a
-stress-aware decision engine:
+The next upgrade should turn this from a full-sample decision memo into a
+stress-window decision engine:
 
-1. calculate tracking error versus passive Brazilian equity
-2. isolate stress subperiod performance
-3. add diagnostics explaining when each strategy helps or hurts
-4. test alternative transaction-cost levels
+1. isolate stress subperiod performance
+2. add diagnostics explaining when each strategy helps or hurts
+3. test alternative transaction-cost levels
+4. calculate active risk by regime
 5. prepare the path for GARCH, MTV-GARCH, and Brazil Stress Transmission Index integration
 
 ## Research Use Only
