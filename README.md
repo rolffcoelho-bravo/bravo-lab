@@ -1,6 +1,12 @@
-# BRAVO Lab
+﻿# BRAVO Lab
 
 **Brazilian Risk, Allocation, Volatility & Options Lab**
+
+[![BRAVO Lab CI](https://github.com/rolffcoelho-bravo/bravo-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/rolffcoelho-bravo/bravo-lab/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![License: MIT](https://img.shields.io/badge/License-MIT-green)
+![Research Use](https://img.shields.io/badge/Use-Research%20Only-lightgrey)
+![Status](https://img.shields.io/badge/Status-Premium%20Quant%2FRisk%20Prototype-blue)
 
 ## Start Here
 
@@ -111,6 +117,20 @@ bravo-lab/
 `-- requirements.txt
 ```
 
+## Quality Gate
+
+BRAVO Lab includes an offline smoke-test and CI layer to protect the integrity of the research package.
+
+| Check | Purpose |
+| --- | --- |
+| `tests/test_imports.py` | Confirms core BRAVO Lab modules import correctly |
+| `tests/test_report_artifacts.py` | Confirms report files, premium figures, and processed evidence files exist |
+| GitHub Actions CI | Runs the offline smoke tests automatically on push and pull request |
+| `reports/front_office_memo.md` | Confirms the front-office decision layer is generated and inspectable |
+| `reports/figures/` | Confirms visual evidence is available for fast review |
+
+Run locally: `PYTHONPATH=src pytest -q`
+
 ## Quickstart
 
 Phase 1 is documentation and repository structure. Full implementation is planned in the next phase.
@@ -184,3 +204,4 @@ If you use this project, its code, methodology, diagnostics, research structure,
       type = {Python research software},
       url = {https://github.com/rolffcoelho-bravo/bravo-lab}
     }
+
