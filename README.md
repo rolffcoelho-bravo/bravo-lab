@@ -65,22 +65,23 @@ The project follows a layered methodology:
 
 ```text
 bravo-lab/
-â”œâ”€â”€ app/
-â”œâ”€â”€ data/
-â”‚   â”œâ”€â”€ raw/
-â”‚   â””â”€â”€ processed/
-â”œâ”€â”€ docs/
-â”‚   â”œâ”€â”€ methodology.md
-â”‚   â””â”€â”€ reviewer_guide.md
-â”œâ”€â”€ notebooks/
-â”œâ”€â”€ reports/
-â”‚   â”œâ”€â”€ figures/
-â”‚   â””â”€â”€ nu_asset_application_note.md
-â”œâ”€â”€ src/
-â”‚   â””â”€â”€ bravo/
-â”œâ”€â”€ Makefile
-â”œâ”€â”€ README.md
-â””â”€â”€ requirements.txt
+|-- app/
+|-- data/
+|   |-- raw/
+|   `-- processed/
+|-- docs/
+|   |-- methodology.md
+|   `-- reviewer_guide.md
+|-- notebooks/
+|-- reports/
+|   |-- figures/
+|   `-- nu_asset_application_note.md
+|-- src/
+|   `-- bravo/
+|-- Makefile
+|-- README.md
+|-- CITATION.cff
+`-- requirements.txt
 ```
 
 ## Quickstart
@@ -156,4 +157,5 @@ If you use this project, its code, methodology, diagnostics, research structure,
       type = {Python research software},
       url = {https://github.com/rolffcoelho-bravo/bravo-lab}
     }
+
 
