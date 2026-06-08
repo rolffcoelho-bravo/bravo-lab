@@ -41,6 +41,11 @@ from bravo.diagnostics import (
 )
 from bravo.metrics import summarize_performance
 from bravo.strategies import build_overlay_return_table
+from bravo.stress_signals import (
+    build_stress_signal_table,
+    stress_signal_interpretation,
+    stress_signal_summary,
+)
 from bravo.volatility import build_baseline_regime_table
 
 
@@ -727,6 +732,53 @@ def _option_attribution_context_to_markdown(
     return "\n".join(lines)
 
 
+
+def _stress_signal_summary_to_markdown(summary: pd.DataFrame) -> str:
+    headers = [
+        "Date",
+        "Composite Stress Score",
+        "Stress Regime",
+        "Top Pressure 1",
+        "Value 1",
+        "Top Pressure 2",
+        "Value 2",
+        "Top Pressure 3",
+        "Value 3",
+        "Brazil Drawdown",
+        "Brazil 21D Vol",
+        "VIX Level",
+    ]
+
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+
+    for _, row in summary.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(pd.to_datetime(row["date"]).date()),
+                    _format_number(row["multi_asset_stress_score"]),
+                    str(row["multi_asset_stress_regime"]),
+                    str(row["top_pressure_1"]),
+                    _format_number(row["top_pressure_1_value"]),
+                    str(row["top_pressure_2"]),
+                    _format_number(row["top_pressure_2_value"]),
+                    str(row["top_pressure_3"]),
+                    _format_number(row["top_pressure_3_value"]),
+                    _format_percentage(row["brazil_drawdown"]),
+                    _format_percentage(row["brazil_realized_vol_21d"]),
+                    _format_number(row["vix_level"]),
+                ]
+            )
+            + " |"
+        )
+
+    return "\n".join(lines)
+
+
 def _data_provenance_table(
     prices: pd.DataFrame,
     returns: pd.DataFrame,
@@ -1027,8 +1079,9 @@ def _report_structure() -> str:
 | 7 | Synthetic Overlay Results | Passive versus covered call versus collar versus stress-aware overlay |
 | 8 | Active Risk Diagnostics | Tracks active return, tracking error, hit rate, and information ratio |
 | 9 | Active Risk by Regime | Shows where each overlay creates tracking error by market state |
-| 10 | Drawdown and Recovery Diagnostics | Tests behavior in drawdown depth and rebound windows |
-| 11 | Regime and Stress Diagnostics | Tests whether the overlay helps when market pressure rises |
+| 10 | Multi-Asset Stress Signals | Adds FX, VIX, EWZ, and global-equity pressure to the stress view |
+| 11 | Drawdown and Recovery Diagnostics | Tests behavior in drawdown depth and rebound windows |
+| 12 | Regime and Stress Diagnostics | Tests whether the overlay helps when market pressure rises |
 | 12 | Strategy Help-Hurt Diagnostics | Explains when each overlay adds value or creates drag |
 | 13 | Implementation Drag Diagnostics | Separates gross signal, cost drag, and net overlay effect |
 | 14 | Option Overlay Attribution | Separates premium, protection cost, payoff, drag, and net effect |
@@ -1055,6 +1108,15 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
         raise KeyError("Expected 'brazil_equity' in returns. Check ticker configuration.")
 
     regime_table = build_baseline_regime_table(data.returns["brazil_equity"])
+
+    stress_signal_table = build_stress_signal_table(
+        prices=data.prices,
+        returns=data.returns,
+    )
+
+    stress_signal_latest = stress_signal_summary(stress_signal_table)
+
+    stress_signal_read = stress_signal_interpretation(stress_signal_latest)
 
     maturity_days = 21
     periods_per_year = 252 / maturity_days
@@ -1171,6 +1233,8 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
 
     performance_summary_path = PROCESSED_DATA_DIR / "baseline_performance_summary.csv"
     regime_table_path = PROCESSED_DATA_DIR / "brazil_equity_regime_table.csv"
+    stress_signal_table_path = PROCESSED_DATA_DIR / "multi_asset_stress_signal_table.csv"
+    stress_signal_summary_path = PROCESSED_DATA_DIR / "multi_asset_stress_signal_summary.csv"
     overlay_returns_path = PROCESSED_DATA_DIR / "overlay_return_table.csv"
     overlay_summary_path = PROCESSED_DATA_DIR / "overlay_performance_summary.csv"
     data_provenance_path = PROCESSED_DATA_DIR / "data_provenance_table.csv"
@@ -1189,6 +1253,8 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
 
     performance_summary.to_csv(performance_summary_path)
     regime_table.to_csv(regime_table_path)
+    stress_signal_table.to_csv(stress_signal_table_path)
+    stress_signal_latest.to_csv(stress_signal_summary_path, index=False)
     overlay_returns.to_csv(overlay_returns_path)
     overlay_summary.to_csv(overlay_summary_path)
     data_provenance.to_csv(data_provenance_path, index=False)
@@ -1235,7 +1301,7 @@ Generated at: **{generated_at}**
 
 Data window: **{start_date} to {end_date}**
 
-Target report length: **20 to 22 PDF pages**
+Target report length: **21 to 23 PDF pages**
 
 ## 1. Executive Signal
 
@@ -1382,7 +1448,24 @@ extreme-stress markets.
 
 {active_regime_read}
 
-## 10. Drawdown and Recovery Diagnostics
+## 10. Multi-Asset Stress Signals
+
+The first regime layer is built from local Brazilian equity behavior. That is
+useful, but incomplete. A portfolio stress system should also look outside the
+local price series.
+
+This section adds external Brazil exposure, global equity pressure, USD/BRL
+pressure, and VIX pressure to create a broader multi-asset stress dashboard. It
+does not forecast markets. It identifies where pressure is currently coming
+from.
+
+{_stress_signal_summary_to_markdown(stress_signal_latest)}
+
+### Multi-Asset Stress Interpretation
+
+{stress_signal_read}
+
+## 11. Drawdown and Recovery Diagnostics
 
 Drawdown diagnostics ask whether the overlay helps at different levels of
 benchmark pain. Recovery diagnostics ask the uncomfortable second question:
@@ -1403,7 +1486,7 @@ still become expensive during the recovery.
 
 {drawdown_recovery_read}
 
-## 11. Regime and Stress-Window Diagnostics
+## 12. Regime and Stress-Window Diagnostics
 
 Full-sample metrics can hide the real question. A strategy that looks strong in
 normal conditions may fail when the benchmark is under pressure.
@@ -1424,7 +1507,7 @@ and active-risk control matter most.
 
 {stress_read}
 
-## 12. Strategy Help-Hurt Diagnostics
+## 13. Strategy Help-Hurt Diagnostics
 
 The help-hurt diagnostic explains the trade-off behind each overlay. A strategy
 can protect the downside and still hurt the portfolio if it gives away too much
@@ -1440,7 +1523,7 @@ periods where it creates drag versus passive Brazilian equity.
 
 {help_hurt_read}
 
-## 13. Implementation Drag Diagnostics
+## 14. Implementation Drag Diagnostics
 
 The implementation-drag diagnostic separates the gross overlay signal from the
 net result after transaction costs. This matters because an overlay can look
@@ -1456,7 +1539,7 @@ layer showing whether the overlay signal survives implementation.
 
 {implementation_read}
 
-## 14. Option Overlay Attribution
+## 15. Option Overlay Attribution
 
 This attribution layer explains why the synthetic option overlay worked or
 failed. It separates the model-implied return into premium income, protection
@@ -1473,7 +1556,7 @@ the derivatives logic inspectable.
 
 {option_attribution_read}
 
-## 15. Option Attribution by Regime and Drawdown Bucket
+## 16. Option Attribution by Regime and Drawdown Bucket
 
 The previous attribution table explains the average option overlay effect. This
 section asks where that effect appears. Premium income, protection cost, payoff
@@ -1496,11 +1579,11 @@ drag near market peaks.
 
 {option_context_read}
 
-## 16. Overlay Decision Matrix
+## 17. Overlay Decision Matrix
 
 {_strategy_decision_matrix()}
 
-## 17. Strategy Trade-Off
+## 18. Strategy Trade-Off
 
 **Best annualized return:** `{best_return}`
 
@@ -1522,13 +1605,13 @@ but their cost and upside cap must be justified by the current risk state.
 Stress-aware switching adds discipline, but only if the regime signal is stable
 enough to avoid unnecessary turnover.
 
-## 18. Results SWOT
+## 19. Results SWOT
 
 How to cope with the signal before turning it into a portfolio action.
 
 {_results_swot()}
 
-## 19. ShockBridge Transmission Read
+## 20. ShockBridge Transmission Read
 
 Brazilian equity does not trade in isolation. The book can be hit through local
 rates, fiscal repricing, FX pressure, global volatility, commodity shocks, and
@@ -1542,7 +1625,7 @@ The key insight is simple: volatility is not only a number. It is a carrier of
 stress. When volatility rises with drawdown, the book is not just moving. It is
 absorbing transmission.
 
-## 20. What To Watch Next
+## 21. What To Watch Next
 
 {watch_next}
 
@@ -1550,7 +1633,7 @@ The next model version should not simply add complexity. It should improve the
 decision. The immediate test is whether transaction costs, tracking error, and
 stress subperiod performance confirm or weaken the current overlay ranking.
 
-## 21. What Would Break This View
+## 22. What Would Break This View
 
 This baseline view should be challenged if one of the following happens:
 
@@ -1563,7 +1646,7 @@ This baseline view should be challenged if one of the following happens:
 7. The information ratio is positive in the full sample but weak during stress windows.
 8. Tracking error rises without clear drawdown reduction or active return compensation.
 
-## 22. Model Limits and Governance
+## 23. Model Limits and Governance
 
 This report is intentionally clear about what it does not prove.
 
@@ -1576,10 +1659,12 @@ This report is intentionally clear about what it does not prove.
 - Active risk diagnostics are useful but still require stress-window validation.
 - This is research infrastructure, not investment advice.
 
-## 23. Generated Evidence Files
+## 24. Generated Evidence Files
 
 - `{performance_summary_path}`
 - `{regime_table_path}`
+- `{stress_signal_table_path}`
+- `{stress_signal_summary_path}`
 - `{overlay_returns_path}`
 - `{overlay_summary_path}`
 - `{data_provenance_path}`
@@ -1597,7 +1682,7 @@ This report is intentionally clear about what it does not prove.
 - `{option_attribution_drawdown_path}`
 - `{output_path}`
 
-## 24. Next Upgrade
+## 25. Next Upgrade
 
 The next upgrade should turn this from a stress-window decision memo into a
 more realistic implementation framework:
@@ -1605,8 +1690,8 @@ more realistic implementation framework:
 1. test alternative transaction-cost levels
 2. validate synthetic attribution against real B3 option-chain data when available
 3. add drawdown duration and recovery-speed diagnostics
-4. add stress-signal inputs beyond price, including FX, VIX, and external Brazil exposure
-5. prepare the path for GARCH, MTV-GARCH, and Brazil Stress Transmission Index integration
+4. convert the multi-asset stress dashboard into a formal Brazil Stress Transmission Index
+5. prepare the path for GARCH, MTV-GARCH, and portfolio-governance scenario testing
 
 ## Research Use Only
 
