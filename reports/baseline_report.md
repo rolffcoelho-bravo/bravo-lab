@@ -2,19 +2,19 @@
 
 **Subtitle:** Brazilian Equity Risk, Volatility Transmission, and Synthetic Protection Logic
 
-Generated at: **2026-06-08 19:10:47 UTC**
+Generated at: **2026-06-08 19:27:20 UTC**
 
 Data window: **2014-01-02 to 2026-06-08**
 
-Target report length: **12 to 14 PDF pages**
+Target report length: **14 to 16 PDF pages**
 
 ## 1. Executive Signal
 
 **Current regime:** `stress`
 
-**Latest realized volatility:** 16.41%
+**Latest realized volatility:** 16.40%
 
-**Latest drawdown:** -15.17%
+**Latest drawdown:** -15.21%
 
 **Decision bias:** Protection bias. The current signal gives more weight to drawdown control than to full upside capture. The strongest drawdown profile is currently `collar`. The strongest risk-adjusted profile is currently `collar`.
 
@@ -34,11 +34,12 @@ ShockBridge Signal: the market is inside a stress transmission zone. Covered cal
 | 6 | Baseline Risk Metrics | Return, risk, Sharpe, drawdown, VaR, CVaR |
 | 7 | Synthetic Overlay Results | Passive versus covered call versus collar versus stress-aware overlay |
 | 8 | Active Risk Diagnostics | Tracks active return, tracking error, hit rate, and information ratio |
-| 9 | Overlay Decision Matrix | When each strategy is useful or dangerous |
-| 10 to 11 | Results SWOT | How to cope with the signal before portfolio action |
-| 12 | ShockBridge Transmission Read | How stress moves into the book |
-| 13 | What To Watch Next | Confirmation signals and warning signals |
-| 14 | Model Limits and Evidence Files | What is proven, what is not, and what comes next |
+| 9 | Regime and Stress Diagnostics | Tests whether the overlay helps when market pressure rises |
+| 10 | Overlay Decision Matrix | When each strategy is useful or dangerous |
+| 11 to 12 | Results SWOT | How to cope with the signal before portfolio action |
+| 13 | ShockBridge Transmission Read | How stress moves into the book |
+| 14 | What To Watch Next | Confirmation signals and warning signals |
+| 15 | Model Limits and Evidence Files | What is proven, what is not, and what comes next |
 
 ## 3. Portfolio Question
 
@@ -111,9 +112,9 @@ machine learning.
 
 Latest classified regime: **stress**
 
-Latest realized volatility: **16.41%**
+Latest realized volatility: **16.40%**
 
-Latest drawdown: **-15.17%**
+Latest drawdown: **-15.21%**
 
 ### Regime Distribution
 
@@ -134,10 +135,10 @@ overlay discussion is taking place in a calm, fragile, or stressed environment.
 | Asset | Ann. Return | Ann. Volatility | Sharpe | Sortino | Max Drawdown | VaR 95% | CVaR 95% | Obs. |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | brazil_equity | 9.92% | 23.14% | 0.525 | 0.686 | -46.93% | -2.21% | -3.28% | 3238 |
-| fx_usdbrl | 6.33% | 16.46% | 0.455 | 0.702 | -26.80% | -1.59% | -2.23% | 3238 |
+| fx_usdbrl | 6.32% | 16.46% | 0.455 | 0.702 | -26.80% | -1.59% | -2.23% | 3238 |
 | brazil_external | 2.56% | 33.91% | 0.246 | 0.323 | -66.54% | -3.30% | -4.84% | 3238 |
-| global_equity | 13.31% | 16.92% | 0.823 | 0.985 | -33.72% | -1.60% | -2.59% | 3238 |
-| vix | 2.08% | 133.48% | 0.623 | 1.273 | -85.66% | -10.53% | -14.21% | 3238 |
+| global_equity | 13.30% | 16.92% | 0.823 | 0.985 | -33.72% | -1.60% | -2.59% | 3238 |
+| vix | 2.24% | 133.46% | 0.624 | 1.276 | -85.66% | -10.53% | -14.20% | 3238 |
 
 ## 8. Synthetic Overlay Results
 
@@ -163,10 +164,10 @@ annualized using **12.0 periods per year**.
 
 | Strategy | Ann. Return | Ann. Volatility | Sharpe | Max Drawdown | Best Period | Worst Period | Obs. |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| passive_brazil_equity | 9.93% | 22.24% | 0.544 | -37.77% | 21.22% | -35.92% | 151 |
+| passive_brazil_equity | 9.93% | 22.24% | 0.543 | -37.77% | 21.22% | -35.92% | 151 |
 | covered_call | 7.92% | 16.80% | 0.549 | -36.79% | 10.57% | -35.16% | 151 |
-| collar | 5.54% | 10.23% | 0.580 | -21.49% | 4.11% | -4.76% | 151 |
-| stress_aware_overlay | 6.80% | 13.62% | 0.552 | -23.01% | 10.58% | -14.33% | 151 |
+| collar | 5.54% | 10.23% | 0.579 | -21.49% | 4.11% | -4.76% | 151 |
+| stress_aware_overlay | 6.79% | 13.62% | 0.552 | -23.01% | 10.58% | -14.33% | 151 |
 
 ## 9. Active Risk Diagnostics
 
@@ -184,7 +185,54 @@ asks whether the overlay helps when passive exposure is already losing money.
 | collar | -6.16% | 14.82% | -0.416 | 69.54% | 100.00% | -17.62% | 151 |
 | stress_aware_overlay | -4.57% | 13.62% | -0.335 | 44.37% | 64.18% | -17.62% | 151 |
 
-## 10. Overlay Decision Matrix
+## 10. Regime and Stress-Window Diagnostics
+
+Full-sample metrics can hide the real question. A strategy that looks strong in
+normal conditions may fail when the benchmark is under pressure.
+
+This section tests the overlay behavior by regime and during stress windows. The
+goal is to identify whether the strategy helps when protection, income discipline,
+and active-risk control matter most.
+
+### Regime-Level Performance
+
+| Regime | Strategy | Avg. Period Return | Median Period Return | Best Period | Worst Period | Positive Hit Rate | Obs. |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| calm | passive_brazil_equity | 3.81% | 3.29% | 12.50% | -4.07% | 76.67% | 30 |
+| calm | covered_call | 2.36% | 3.45% | 4.78% | -3.45% | 80.00% | 30 |
+| calm | collar | 1.82% | 3.19% | 3.61% | -3.76% | 76.67% | 30 |
+| calm | stress_aware_overlay | 2.92% | 3.13% | 10.58% | -4.07% | 80.00% | 30 |
+| extreme_stress | passive_brazil_equity | -1.04% | -1.04% | 21.22% | -35.92% | 38.24% | 34 |
+| extreme_stress | covered_call | -0.92% | 0.18% | 10.57% | -35.16% | 52.94% | 34 |
+| extreme_stress | collar | -0.43% | -0.63% | 4.11% | -4.65% | 47.06% | 34 |
+| extreme_stress | stress_aware_overlay | -0.77% | -0.63% | 4.11% | -14.33% | 47.06% | 34 |
+| fragile | passive_brazil_equity | 0.94% | 0.49% | 10.54% | -6.64% | 57.14% | 21 |
+| fragile | covered_call | 0.83% | 1.36% | 4.48% | -5.13% | 61.90% | 21 |
+| fragile | collar | 0.39% | 0.90% | 3.55% | -4.51% | 57.14% | 21 |
+| fragile | stress_aware_overlay | 0.77% | 0.49% | 10.54% | -5.27% | 57.14% | 21 |
+| neutral | passive_brazil_equity | 1.11% | 0.66% | 12.47% | -8.34% | 57.14% | 21 |
+| neutral | covered_call | 0.72% | 1.62% | 5.33% | -7.38% | 61.90% | 21 |
+| neutral | collar | 0.50% | 1.11% | 3.69% | -4.61% | 57.14% | 21 |
+| neutral | stress_aware_overlay | 0.42% | 0.75% | 7.68% | -8.34% | 57.14% | 21 |
+| stress | passive_brazil_equity | 0.67% | 0.19% | 17.55% | -8.72% | 51.11% | 45 |
+| stress | covered_call | 0.98% | 1.59% | 7.35% | -7.58% | 62.22% | 45 |
+| stress | collar | 0.35% | 0.72% | 3.90% | -4.76% | 53.33% | 45 |
+| stress | stress_aware_overlay | 0.18% | 0.72% | 3.90% | -7.58% | 53.33% | 45 |
+
+### Stress-Window Summary
+
+| Strategy | Avg. Stress Return | Median Stress Return | Worst Stress Return | Best Stress Return | Hit Rate vs Passive | Downside Protection Rate | Obs. |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| passive_brazil_equity | -0.07% | -0.37% | -35.92% | 21.22% | NA | NA | 79 |
+| covered_call | 0.16% | 0.91% | -35.16% | 10.57% | 83.54% | 100.00% | 79 |
+| collar | 0.02% | 0.17% | -4.76% | 4.11% | 75.95% | 100.00% | 79 |
+| stress_aware_overlay | -0.23% | 0.17% | -14.33% | 4.11% | 62.03% | 78.57% | 79 |
+
+### Stress-Window Interpretation
+
+Stress-window read: `collar` showed the strongest worst-period protection during stress windows, while `covered_call` showed the strongest average stress-period return. The portfolio question is whether the protection benefit is large enough to justify the active risk and implementation complexity.
+
+## 11. Overlay Decision Matrix
 
 | Strategy | Best Use | Main Risk | Portfolio Reading |
 | --- | --- | --- | --- |
@@ -193,7 +241,7 @@ asks whether the overlay helps when passive exposure is already losing money.
 | Collar | Stress regime, drawdown pressure, capital preservation | Protection cost and capped upside | Use when left-tail control matters more than return maximization |
 | Stress-Aware Overlay | Regime-dependent switching | Model risk and signal timing | Uses passive in calm regimes, covered calls in fragile regimes, and collars in stress regimes |
 
-## 11. Strategy Trade-Off
+## 12. Strategy Trade-Off
 
 **Best annualized return:** `passive_brazil_equity`
 
@@ -215,7 +263,7 @@ but their cost and upside cap must be justified by the current risk state.
 Stress-aware switching adds discipline, but only if the regime signal is stable
 enough to avoid unnecessary turnover.
 
-## 12. Results SWOT
+## 13. Results SWOT
 
 How to cope with the signal before turning it into a portfolio action.
 
@@ -240,7 +288,7 @@ The main opportunity is regime switching with active-risk control. A static cove
 
 The main threat is clean-model illusion. A strategy can look strong before costs, spreads, liquidity, and stress subperiods. The next version must attack that weakness directly.
 
-## 13. ShockBridge Transmission Read
+## 14. ShockBridge Transmission Read
 
 Brazilian equity does not trade in isolation. The book can be hit through local
 rates, fiscal repricing, FX pressure, global volatility, commodity shocks, and
@@ -254,7 +302,7 @@ The key insight is simple: volatility is not only a number. It is a carrier of
 stress. When volatility rises with drawdown, the book is not just moving. It is
 absorbing transmission.
 
-## 14. What To Watch Next
+## 15. What To Watch Next
 
 Watch whether drawdown stabilizes while realized volatility falls. If that does not happen, protection remains more valuable than income. If volatility falls without price repair, the market may be hiding fragility under calmer surface data.
 
@@ -262,7 +310,7 @@ The next model version should not simply add complexity. It should improve the
 decision. The immediate test is whether transaction costs, tracking error, and
 stress subperiod performance confirm or weaken the current overlay ranking.
 
-## 15. What Would Break This View
+## 16. What Would Break This View
 
 This baseline view should be challenged if one of the following happens:
 
@@ -275,7 +323,7 @@ This baseline view should be challenged if one of the following happens:
 7. The information ratio is positive in the full sample but weak during stress windows.
 8. Tracking error rises without clear drawdown reduction or active return compensation.
 
-## 16. Model Limits and Governance
+## 17. Model Limits and Governance
 
 This report is intentionally clear about what it does not prove.
 
@@ -288,7 +336,7 @@ This report is intentionally clear about what it does not prove.
 - Active risk diagnostics are useful but still require stress-window validation.
 - This is research infrastructure, not investment advice.
 
-## 17. Generated Evidence Files
+## 18. Generated Evidence Files
 
 - `E:\Claude AI\Project_bravo\data\processed\baseline_performance_summary.csv`
 - `E:\Claude AI\Project_bravo\data\processed\brazil_equity_regime_table.csv`
@@ -296,17 +344,19 @@ This report is intentionally clear about what it does not prove.
 - `E:\Claude AI\Project_bravo\data\processed\overlay_performance_summary.csv`
 - `E:\Claude AI\Project_bravo\data\processed\data_provenance_table.csv`
 - `E:\Claude AI\Project_bravo\data\processed\active_risk_summary.csv`
+- `E:\Claude AI\Project_bravo\data\processed\regime_performance_summary.csv`
+- `E:\Claude AI\Project_bravo\data\processed\stress_window_summary.csv`
 - `E:\Claude AI\Project_bravo\reports\baseline_report.md`
 
-## 18. Next Upgrade
+## 19. Next Upgrade
 
-The next upgrade should turn this from a full-sample decision memo into a
-stress-window decision engine:
+The next upgrade should turn this from a stress-window decision memo into a
+more realistic implementation framework:
 
-1. isolate stress subperiod performance
-2. add diagnostics explaining when each strategy helps or hurts
-3. test alternative transaction-cost levels
-4. calculate active risk by regime
+1. test alternative transaction-cost levels
+2. calculate active risk by regime depth and drawdown severity
+3. add strategy diagnostics explaining when each overlay helps or hurts
+4. integrate real B3 option-chain data when available
 5. prepare the path for GARCH, MTV-GARCH, and Brazil Stress Transmission Index integration
 
 ## Research Use Only
