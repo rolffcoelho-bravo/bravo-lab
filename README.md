@@ -2,9 +2,9 @@
 
 **Brazilian Risk, Allocation, Volatility & Options Lab**
 
-BRAVO Lab is a Python portfolio research prototype for Brazilian volatility-aware derivatives overlays, risk-regime analysis, contagion signals, and decision-grade portfolio reporting.
+BRAVO Lab is a Python research pipeline for transforming Brazilian market volatility, derivatives overlays, contagion signals, and dynamic risk regimes into portfolio-grade analytical reports.
 
-The project is designed to test whether systematic Brazilian equity overlays, especially covered calls, collars, and stress-aware downside protection structures, can be improved by combining volatility regimes, transaction-cost-aware backtesting, dynamic risk models, and financial-econometric stress indicators.
+The project asks a practical question: can advanced financial-econometric models improve how Brazilian equity exposure is protected, monetized, and evaluated across calm, fragile, stress, and extreme-stress market regimes?
 
 This repository is not a trading recommendation. It is a research infrastructure prototype built to show how Brazilian market knowledge, derivatives logic, financial econometrics, and automation can be transformed into a repeatable portfolio research pipeline.
 
