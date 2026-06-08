@@ -360,3 +360,137 @@ def strategy_help_hurt_interpretation(help_hurt: pd.DataFrame) -> str:
         "portfolio can reduce left-tail pain, but protection and income strategies "
         "can also give away part of the rebound."
     )
+
+
+def implementation_drag_diagnostics(
+    gross_strategy_returns: pd.DataFrame,
+    net_strategy_returns: pd.DataFrame,
+    benchmark_column: str = "passive_brazil_equity",
+) -> pd.DataFrame:
+    """
+    Separate gross overlay effect, transaction-cost drag, and net overlay effect.
+
+    Gross returns are strategy returns before transaction costs.
+    Net returns are strategy returns after transaction costs.
+    The difference between the two is the implementation drag.
+
+    This diagnostic does not yet decompose every option leg into premium income,
+    payoff, and moneyness attribution. It is the intermediate institutional layer
+    that shows whether the overlay survives realistic implementation costs.
+    """
+    if benchmark_column not in gross_strategy_returns.columns:
+        raise KeyError(f"Benchmark column not found in gross returns: {benchmark_column}")
+
+    if benchmark_column not in net_strategy_returns.columns:
+        raise KeyError(f"Benchmark column not found in net returns: {benchmark_column}")
+
+    common_index = gross_strategy_returns.index.intersection(net_strategy_returns.index)
+    common_columns = gross_strategy_returns.columns.intersection(net_strategy_returns.columns)
+
+    gross = gross_strategy_returns.loc[common_index, common_columns]
+    net = net_strategy_returns.loc[common_index, common_columns]
+
+    benchmark = net[benchmark_column]
+
+    rows = []
+
+    for strategy in common_columns:
+        if strategy == benchmark_column:
+            continue
+
+        aligned = pd.concat(
+            {
+                "gross": gross[strategy],
+                "net": net[strategy],
+                "benchmark": benchmark,
+            },
+            axis=1,
+        ).dropna()
+
+        if aligned.empty:
+            continue
+
+        gross_active = aligned["gross"] - aligned["benchmark"]
+        net_active = aligned["net"] - aligned["benchmark"]
+        implementation_drag = aligned["net"] - aligned["gross"]
+
+        passive_positive = aligned[aligned["benchmark"] > 0]
+        passive_negative = aligned[aligned["benchmark"] < 0]
+
+        avg_active_when_passive_positive = np.nan
+        avg_active_when_passive_negative = np.nan
+
+        if not passive_positive.empty:
+            avg_active_when_passive_positive = (
+                passive_positive["net"] - passive_positive["benchmark"]
+            ).mean()
+
+        if not passive_negative.empty:
+            avg_active_when_passive_negative = (
+                passive_negative["net"] - passive_negative["benchmark"]
+            ).mean()
+
+        avg_gross_active = gross_active.mean()
+        avg_net_active = net_active.mean()
+        avg_drag = implementation_drag.mean()
+
+        drag_to_gross_signal = np.nan
+        if not np.isclose(avg_gross_active, 0.0):
+            drag_to_gross_signal = abs(avg_drag) / abs(avg_gross_active)
+
+        cost_survival_ratio = np.nan
+        if not np.isclose(avg_gross_active, 0.0):
+            cost_survival_ratio = avg_net_active / avg_gross_active
+
+        rows.append(
+            {
+                "strategy": strategy,
+                "avg_gross_active_return": avg_gross_active,
+                "avg_implementation_drag": avg_drag,
+                "avg_net_active_return": avg_net_active,
+                "total_implementation_drag": implementation_drag.sum(),
+                "drag_to_gross_signal": drag_to_gross_signal,
+                "cost_survival_ratio": cost_survival_ratio,
+                "avg_active_when_passive_positive": avg_active_when_passive_positive,
+                "avg_active_when_passive_negative": avg_active_when_passive_negative,
+                "best_net_active_period": net_active.max(),
+                "worst_net_active_period": net_active.min(),
+                "observations": len(aligned),
+            }
+        )
+
+    return pd.DataFrame(rows).set_index("strategy")
+
+
+def implementation_drag_interpretation(implementation_summary: pd.DataFrame) -> str:
+    """
+    Produce a compact interpretation of implementation drag diagnostics.
+    """
+    if implementation_summary.empty:
+        return (
+            "No implementation-drag diagnostics were available. Gross and net "
+            "strategy return tables are required before interpreting cost survival."
+        )
+
+    valid_net = implementation_summary["avg_net_active_return"].dropna()
+    valid_drag_ratio = implementation_summary["drag_to_gross_signal"].dropna()
+
+    if valid_net.empty:
+        best_net = "NA"
+    else:
+        best_net = str(valid_net.idxmax())
+
+    if valid_drag_ratio.empty:
+        most_cost_sensitive = "NA"
+    else:
+        most_cost_sensitive = str(valid_drag_ratio.idxmax())
+
+    return (
+        f"Implementation read: `{best_net}` currently shows the strongest average "
+        "net active return after transaction costs. "
+        f"`{most_cost_sensitive}` is the most cost-sensitive overlay by drag-to-gross "
+        "signal ratio. This matters because an overlay that looks useful before "
+        "costs can become weak once turnover, option-leg execution, and rebalancing "
+        "drag are included."
+    )
+
