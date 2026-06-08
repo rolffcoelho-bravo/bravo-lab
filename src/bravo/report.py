@@ -2488,6 +2488,51 @@ production investment model.
         1,
     )
 
+    front_office_memo = build_front_office_memo(
+        processed_dir=PROCESSED_DATA_DIR,
+    )
+
+    report_figure_paths = build_report_figure_set(
+        processed_dir=PROCESSED_DATA_DIR,
+        figures_dir=REPORTS_DIR / "figures",
+    )
+
+    report_figure_gallery = figure_markdown_gallery(report_figure_paths)
+
+    front_office_block = (
+        f"## Front-Office Executive Memo\n\n{front_office_memo}\n\n"
+        f"## Premium Visual Evidence Layer\n\n{report_figure_gallery}\n\n"
+    )
+
+    if "## Front-Office Executive Memo" not in report:
+        inserted = False
+
+        for section_anchor in [
+            "## 1. Executive Signal",
+            "## 1. Executive Summary",
+        ]:
+            if section_anchor in report:
+                report = report.replace(
+                    section_anchor,
+                    front_office_block + section_anchor,
+                    1,
+                )
+                inserted = True
+                break
+
+        if not inserted:
+            first_section = report.find("\n## ")
+
+            if first_section != -1:
+                report = (
+                    report[:first_section]
+                    + "\n\n"
+                    + front_office_block
+                    + report[first_section:]
+                )
+            else:
+                report = front_office_block + report
+
     output_path.write_text(report, encoding="utf-8")
 
     return output_path
