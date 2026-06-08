@@ -494,3 +494,137 @@ def implementation_drag_interpretation(implementation_summary: pd.DataFrame) -> 
         "drag are included."
     )
 
+
+def active_risk_by_regime(
+    strategy_returns: pd.DataFrame,
+    regime: pd.Series,
+    benchmark_column: str = "passive_brazil_equity",
+    periods_per_year: float = 12.0,
+) -> pd.DataFrame:
+    """
+    Calculate active risk diagnostics by regime.
+
+    This shows where each overlay creates tracking error versus passive exposure:
+    calm markets, fragile markets, stress markets, or extreme-stress markets.
+
+    The purpose is portfolio governance. A strategy can have attractive full-sample
+    active return while creating unacceptable active risk in the wrong regime.
+    """
+    if benchmark_column not in strategy_returns.columns:
+        raise KeyError(f"Benchmark column not found: {benchmark_column}")
+
+    aligned_regime = align_regime_to_strategy_dates(strategy_returns, regime)
+
+    combined = strategy_returns.copy()
+    combined["regime"] = aligned_regime
+
+    rows = []
+
+    for regime_name, regime_data in combined.groupby("regime"):
+        benchmark = regime_data[benchmark_column].dropna()
+
+        for strategy in [col for col in regime_data.columns if col not in ["regime", benchmark_column]]:
+            aligned = pd.concat(
+                {
+                    "strategy": regime_data[strategy],
+                    "benchmark": benchmark,
+                },
+                axis=1,
+            ).dropna()
+
+            if aligned.empty:
+                continue
+
+            active = aligned["strategy"] - aligned["benchmark"]
+            tracking_error = active.std(ddof=1) * np.sqrt(periods_per_year)
+
+            annualized_active_return = active.mean() * periods_per_year
+
+            information_ratio = np.nan
+            if not np.isclose(tracking_error, 0.0):
+                information_ratio = annualized_active_return / tracking_error
+
+            benchmark_negative = aligned[aligned["benchmark"] < 0]
+
+            downside_hit_rate = np.nan
+            if not benchmark_negative.empty:
+                downside_hit_rate = (
+                    benchmark_negative["strategy"] > benchmark_negative["benchmark"]
+                ).mean()
+
+            rows.append(
+                {
+                    "regime": regime_name,
+                    "strategy": strategy,
+                    "annualized_active_return": annualized_active_return,
+                    "tracking_error": tracking_error,
+                    "information_ratio": information_ratio,
+                    "hit_rate_vs_passive": (
+                        aligned["strategy"] > aligned["benchmark"]
+                    ).mean(),
+                    "downside_hit_rate": downside_hit_rate,
+                    "avg_period_active_return": active.mean(),
+                    "best_active_period": active.max(),
+                    "worst_active_period": active.min(),
+                    "observations": len(aligned),
+                }
+            )
+
+    if not rows:
+        return pd.DataFrame(
+            columns=[
+                "regime",
+                "strategy",
+                "annualized_active_return",
+                "tracking_error",
+                "information_ratio",
+                "hit_rate_vs_passive",
+                "downside_hit_rate",
+                "avg_period_active_return",
+                "best_active_period",
+                "worst_active_period",
+                "observations",
+            ]
+        )
+
+    return pd.DataFrame(rows)
+
+
+def active_risk_by_regime_interpretation(active_regime_summary: pd.DataFrame) -> str:
+    """
+    Produce a compact interpretation of active risk by regime.
+    """
+    if active_regime_summary.empty:
+        return (
+            "No active-risk-by-regime diagnostics were available. The model needs "
+            "valid strategy returns and regime labels before governance conclusions "
+            "can be drawn."
+        )
+
+    valid_te = active_regime_summary.dropna(subset=["tracking_error"])
+    valid_ir = active_regime_summary.dropna(subset=["information_ratio"])
+
+    if valid_te.empty:
+        highest_te_strategy = "NA"
+        highest_te_regime = "NA"
+    else:
+        highest_te_row = valid_te.loc[valid_te["tracking_error"].idxmax()]
+        highest_te_strategy = str(highest_te_row["strategy"])
+        highest_te_regime = str(highest_te_row["regime"])
+
+    if valid_ir.empty:
+        best_ir_strategy = "NA"
+        best_ir_regime = "NA"
+    else:
+        best_ir_row = valid_ir.loc[valid_ir["information_ratio"].idxmax()]
+        best_ir_strategy = str(best_ir_row["strategy"])
+        best_ir_regime = str(best_ir_row["regime"])
+
+    return (
+        f"Active-risk-by-regime read: `{highest_te_strategy}` creates the highest "
+        f"tracking error in the `{highest_te_regime}` regime. "
+        f"`{best_ir_strategy}` shows the strongest information ratio in the "
+        f"`{best_ir_regime}` regime. This separates a strategy that looks attractive "
+        "on average from a strategy that is governable under specific market states."
+    )
+

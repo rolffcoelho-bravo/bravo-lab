@@ -20,6 +20,8 @@ import pandas as pd
 from bravo.config import BASELINE_REPORT_PATH, PROCESSED_DATA_DIR, REPORTS_DIR, TICKERS
 from bravo.data import load_market_data
 from bravo.diagnostics import (
+    active_risk_by_regime,
+    active_risk_by_regime_interpretation,
     implementation_drag_diagnostics,
     implementation_drag_interpretation,
     regime_performance_summary,
@@ -497,6 +499,51 @@ def _implementation_drag_to_markdown(summary: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
+
+def _active_risk_by_regime_to_markdown(summary: pd.DataFrame) -> str:
+    headers = [
+        "Regime",
+        "Strategy",
+        "Annualized Active Return",
+        "Tracking Error",
+        "Information Ratio",
+        "Hit Rate",
+        "Downside Hit Rate",
+        "Avg. Active Period",
+        "Best Active Period",
+        "Worst Active Period",
+        "Obs.",
+    ]
+
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+
+    for _, row in summary.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(row["regime"]),
+                    str(row["strategy"]),
+                    _format_percentage(row["annualized_active_return"]),
+                    _format_percentage(row["tracking_error"]),
+                    _format_number(row["information_ratio"]),
+                    _format_percentage(row["hit_rate_vs_passive"]),
+                    _format_percentage(row["downside_hit_rate"]),
+                    _format_percentage(row["avg_period_active_return"]),
+                    _format_percentage(row["best_active_period"]),
+                    _format_percentage(row["worst_active_period"]),
+                    str(int(row["observations"])),
+                ]
+            )
+            + " |"
+        )
+
+    return "\n".join(lines)
+
+
 def _data_provenance_table(
     prices: pd.DataFrame,
     returns: pd.DataFrame,
@@ -796,11 +843,12 @@ def _report_structure() -> str:
 | 6 | Baseline Risk Metrics | Return, risk, Sharpe, drawdown, VaR, CVaR |
 | 7 | Synthetic Overlay Results | Passive versus covered call versus collar versus stress-aware overlay |
 | 8 | Active Risk Diagnostics | Tracks active return, tracking error, hit rate, and information ratio |
-| 9 | Regime and Stress Diagnostics | Tests whether the overlay helps when market pressure rises |
-| 10 | Strategy Help-Hurt Diagnostics | Explains when each overlay adds value or creates drag |
-| 11 | Implementation Drag Diagnostics | Separates gross signal, cost drag, and net overlay effect |
-| 12 | Overlay Decision Matrix | When each strategy is useful or dangerous |
-| 13 to 14 | Results SWOT | How to cope with the signal before portfolio action |
+| 9 | Active Risk by Regime | Shows where each overlay creates tracking error by market state |
+| 10 | Regime and Stress Diagnostics | Tests whether the overlay helps when market pressure rises |
+| 11 | Strategy Help-Hurt Diagnostics | Explains when each overlay adds value or creates drag |
+| 12 | Implementation Drag Diagnostics | Separates gross signal, cost drag, and net overlay effect |
+| 13 | Overlay Decision Matrix | When each strategy is useful or dangerous |
+| 14 to 15 | Results SWOT | How to cope with the signal before portfolio action |
 | 13 | ShockBridge Transmission Read | How stress moves into the book |
 | 14 | What To Watch Next | Confirmation signals and warning signals |
 | 15 | Model Limits and Evidence Files | What is proven, what is not, and what comes next |"""
@@ -853,6 +901,15 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
         benchmark_column="passive_brazil_equity",
     )
 
+    active_regime_summary = active_risk_by_regime(
+        strategy_returns=overlay_returns,
+        regime=regime_table["regime"],
+        benchmark_column="passive_brazil_equity",
+        periods_per_year=periods_per_year,
+    )
+
+    active_regime_read = active_risk_by_regime_interpretation(active_regime_summary)
+
     regime_diagnostics = regime_performance_summary(
         strategy_returns=overlay_returns,
         regime=regime_table["regime"],
@@ -887,6 +944,7 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     overlay_summary_path = PROCESSED_DATA_DIR / "overlay_performance_summary.csv"
     data_provenance_path = PROCESSED_DATA_DIR / "data_provenance_table.csv"
     active_risk_path = PROCESSED_DATA_DIR / "active_risk_summary.csv"
+    active_risk_by_regime_path = PROCESSED_DATA_DIR / "active_risk_by_regime_summary.csv"
     regime_diagnostics_path = PROCESSED_DATA_DIR / "regime_performance_summary.csv"
     stress_window_path = PROCESSED_DATA_DIR / "stress_window_summary.csv"
     help_hurt_path = PROCESSED_DATA_DIR / "strategy_help_hurt_summary.csv"
@@ -898,6 +956,7 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     overlay_summary.to_csv(overlay_summary_path)
     data_provenance.to_csv(data_provenance_path, index=False)
     active_risk_summary.to_csv(active_risk_path)
+    active_regime_summary.to_csv(active_risk_by_regime_path, index=False)
     regime_diagnostics.to_csv(regime_diagnostics_path, index=False)
     stress_summary.to_csv(stress_window_path)
     help_hurt_summary.to_csv(help_hurt_path)
@@ -933,7 +992,7 @@ Generated at: **{generated_at}**
 
 Data window: **{start_date} to {end_date}**
 
-Target report length: **16 to 18 PDF pages**
+Target report length: **17 to 19 PDF pages**
 
 ## 1. Executive Signal
 
@@ -1063,6 +1122,22 @@ shows how often the overlay beats passive. Downside hit rate is stricter. It
 asks whether the overlay helps when passive exposure is already losing money.
 
 {_active_risk_to_markdown(active_risk_summary)}
+
+## 9. Active Risk by Regime
+
+Full-sample tracking error is useful, but it is not enough for portfolio
+governance. A strategy can look acceptable across the whole sample while creating
+too much active risk in a specific market state.
+
+This diagnostic shows where each overlay creates tracking error versus passive
+Brazilian equity exposure: calm markets, fragile markets, stress markets, or
+extreme-stress markets.
+
+{_active_risk_by_regime_to_markdown(active_regime_summary)}
+
+### Active Risk by Regime Interpretation
+
+{active_regime_read}
 
 ## 10. Regime and Stress-Window Diagnostics
 
@@ -1205,6 +1280,7 @@ This report is intentionally clear about what it does not prove.
 - `{overlay_summary_path}`
 - `{data_provenance_path}`
 - `{active_risk_path}`
+- `{active_risk_by_regime_path}`
 - `{regime_diagnostics_path}`
 - `{stress_window_path}`
 - `{help_hurt_path}`
@@ -1217,7 +1293,7 @@ The next upgrade should turn this from a stress-window decision memo into a
 more realistic implementation framework:
 
 1. test alternative transaction-cost levels
-2. calculate active risk by regime depth and drawdown severity
+2. extend active risk into drawdown-depth buckets and recovery windows
 3. decompose option overlays into premium income, payoff effect, and moneyness attribution
 4. integrate real B3 option-chain data when available
 5. prepare the path for GARCH, MTV-GARCH, and Brazil Stress Transmission Index integration
