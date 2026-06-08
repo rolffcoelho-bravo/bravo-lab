@@ -1,13 +1,15 @@
 """
 Derivative overlay strategy prototypes for BRAVO Lab.
 
-This module implements the first synthetic covered call and collar overlays.
+This module implements synthetic passive, covered call, collar, and
+stress-aware overlay strategies.
 
-The first implementation is intentionally simple and auditable:
+The implementation is intentionally transparent:
 - monthly rebalancing approximation
 - Black-Scholes synthetic option premiums
+- configurable transaction-cost assumption
+- regime-dependent strategy switching
 - no real B3 option-chain data yet
-- no transaction costs yet
 - no tax assumptions
 - no liquidity constraints
 
@@ -46,6 +48,9 @@ def _rebalance_points(index: pd.Index, step: int) -> list[int]:
     """
     Create integer rebalance points for a fixed-step approximation.
     """
+    if len(index) == 0:
+        return []
+
     points = list(range(0, len(index), step))
 
     if points[-1] != len(index) - 1:
@@ -54,14 +59,88 @@ def _rebalance_points(index: pd.Index, step: int) -> list[int]:
     return points
 
 
+def _transaction_cost_fraction(
+    transaction_cost_bps: float,
+    number_of_legs: int,
+) -> float:
+    """
+    Convert transaction-cost assumption into a return drag.
+
+    Parameters
+    ----------
+    transaction_cost_bps:
+        Cost in basis points per option leg.
+    number_of_legs:
+        Number of option legs traded during the rebalance.
+
+    Returns
+    -------
+    float
+        Cost as a fraction of portfolio value.
+    """
+    return (transaction_cost_bps / 10_000) * number_of_legs
+
+
+def _get_regime_at_date(regime: pd.Series, date: pd.Timestamp) -> str:
+    """
+    Get the most recent regime available at or before a given date.
+    """
+    if regime is None or regime.empty:
+        return "neutral"
+
+    available = regime.loc[regime.index <= date].dropna()
+
+    if available.empty:
+        return "neutral"
+
+    return str(available.iloc[-1])
+
+
+def _strategy_for_regime(regime_value: str) -> str:
+    """
+    Map regime state into strategy selection.
+
+    The mapping is deliberately conservative:
+    - calm: passive exposure
+    - fragile: covered call income
+    - stress: collar protection
+    - extreme stress: collar protection
+    - neutral or unknown: passive exposure
+    """
+    regime_value = str(regime_value).lower()
+
+    if regime_value == "calm":
+        return "passive_brazil_equity"
+
+    if regime_value == "fragile":
+        return "covered_call"
+
+    if regime_value in {"stress", "extreme_stress"}:
+        return "collar"
+
+    return "passive_brazil_equity"
+
+
 def build_passive_returns(
     asset_returns: pd.Series,
     name: str = "passive_brazil_equity",
 ) -> pd.DataFrame:
     """
-    Create passive benchmark returns.
+    Create passive benchmark daily returns.
     """
     return asset_returns.dropna().rename(name).to_frame()
+
+
+def build_passive_period_returns(
+    prices: pd.Series,
+    rebalance_index: pd.Index,
+    name: str = "passive_brazil_equity",
+) -> pd.Series:
+    """
+    Create passive benchmark returns on the same rebalance dates as overlays.
+    """
+    period_prices = prices.loc[rebalance_index].dropna()
+    return period_prices.pct_change().rename(name)
 
 
 def covered_call_overlay_returns(
@@ -71,6 +150,7 @@ def covered_call_overlay_returns(
     maturity_days: int = 21,
     volatility_window: int = 63,
     risk_free_rate: float = 0.0,
+    transaction_cost_bps: float = 5.0,
 ) -> OverlayBacktestResult:
     """
     Backtest a synthetic covered call overlay.
@@ -78,20 +158,8 @@ def covered_call_overlay_returns(
     The strategy owns the underlying and sells an out-of-the-money call at each
     rebalance date. The payoff is evaluated at the next rebalance date.
 
-    Parameters
-    ----------
-    prices:
-        Adjusted price series for the underlying.
-    returns:
-        Daily return series for the underlying.
-    call_moneyness:
-        Call strike as a multiple of spot. Example: 1.03 means 3% OTM.
-    maturity_days:
-        Approximate option maturity in trading days.
-    volatility_window:
-        Rolling window used to estimate annualized volatility.
-    risk_free_rate:
-        Annual risk-free rate used in Black-Scholes.
+    The transaction-cost assumption is applied as a simple return drag per
+    option leg. A covered call has one option leg.
     """
     aligned = pd.concat({"price": prices, "return": returns}, axis=1).dropna()
     vol = estimate_annualized_volatility(aligned["return"], window=volatility_window)
@@ -102,6 +170,10 @@ def covered_call_overlay_returns(
     diagnostics = []
 
     time_to_maturity = maturity_days / TRADING_DAYS_PER_YEAR
+    cost_fraction = _transaction_cost_fraction(
+        transaction_cost_bps=transaction_cost_bps,
+        number_of_legs=1,
+    )
 
     for start_pos, end_pos in zip(rebalance_points[:-1], rebalance_points[1:]):
         start_date = aligned.index[start_pos]
@@ -130,7 +202,10 @@ def covered_call_overlay_returns(
         call_payoff_fraction = max(spot_end / spot_start - call_moneyness, 0)
 
         overlay_period_return = (
-            underlying_period_return + premium_fraction - call_payoff_fraction
+            underlying_period_return
+            + premium_fraction
+            - call_payoff_fraction
+            - cost_fraction
         )
 
         strategy_returns.append(
@@ -149,6 +224,7 @@ def covered_call_overlay_returns(
                 "strike_call": strike,
                 "estimated_volatility": volatility,
                 "call_premium_fraction": premium_fraction,
+                "transaction_cost_fraction": cost_fraction,
                 "underlying_period_return": underlying_period_return,
                 "covered_call_period_return": overlay_period_return,
             }
@@ -168,12 +244,16 @@ def collar_overlay_returns(
     maturity_days: int = 21,
     volatility_window: int = 63,
     risk_free_rate: float = 0.0,
+    transaction_cost_bps: float = 5.0,
 ) -> OverlayBacktestResult:
     """
     Backtest a synthetic protective collar overlay.
 
     The strategy owns the underlying, buys an out-of-the-money put, and sells
     an out-of-the-money call at each rebalance date.
+
+    The transaction-cost assumption is applied as a simple return drag per
+    option leg. A collar has two option legs.
     """
     aligned = pd.concat({"price": prices, "return": returns}, axis=1).dropna()
     vol = estimate_annualized_volatility(aligned["return"], window=volatility_window)
@@ -184,6 +264,10 @@ def collar_overlay_returns(
     diagnostics = []
 
     time_to_maturity = maturity_days / TRADING_DAYS_PER_YEAR
+    cost_fraction = _transaction_cost_fraction(
+        transaction_cost_bps=transaction_cost_bps,
+        number_of_legs=2,
+    )
 
     for start_pos, end_pos in zip(rebalance_points[:-1], rebalance_points[1:]):
         start_date = aligned.index[start_pos]
@@ -229,6 +313,7 @@ def collar_overlay_returns(
             + put_payoff_fraction
             - call_payoff_fraction
             + net_premium_fraction
+            - cost_fraction
         )
 
         strategy_returns.append(
@@ -250,8 +335,71 @@ def collar_overlay_returns(
                 "put_cost_fraction": put_cost_fraction,
                 "call_premium_fraction": call_premium_fraction,
                 "net_premium_fraction": net_premium_fraction,
+                "transaction_cost_fraction": cost_fraction,
                 "underlying_period_return": underlying_period_return,
                 "collar_period_return": collar_period_return,
+            }
+        )
+
+    returns_df = pd.DataFrame(strategy_returns).set_index("date")
+    diagnostics_df = pd.DataFrame(diagnostics)
+
+    return OverlayBacktestResult(returns=returns_df, diagnostics=diagnostics_df)
+
+
+def stress_aware_overlay_returns(
+    overlay_returns: pd.DataFrame,
+    covered_call_diagnostics: pd.DataFrame,
+    regime: pd.Series,
+) -> OverlayBacktestResult:
+    """
+    Build a stress-aware overlay using regime-dependent switching.
+
+    The strategy selection is made at the beginning of each holding period using
+    the most recent available regime signal.
+
+    Mapping:
+    - calm: passive exposure
+    - fragile: covered call
+    - stress: collar
+    - extreme_stress: collar
+    - neutral: passive exposure
+    """
+    strategy_returns = []
+    diagnostics = []
+
+    if overlay_returns.empty:
+        return OverlayBacktestResult(
+            returns=pd.DataFrame(columns=["stress_aware_overlay"]),
+            diagnostics=pd.DataFrame(),
+        )
+
+    diagnostics_by_end = covered_call_diagnostics.set_index("end_date")
+
+    for date, row in overlay_returns.iterrows():
+        if date not in diagnostics_by_end.index:
+            continue
+
+        start_date = diagnostics_by_end.loc[date, "start_date"]
+        regime_value = _get_regime_at_date(regime=regime, date=start_date)
+        selected_strategy = _strategy_for_regime(regime_value)
+
+        selected_return = row.get(selected_strategy, np.nan)
+
+        strategy_returns.append(
+            {
+                "date": date,
+                "stress_aware_overlay": selected_return,
+            }
+        )
+
+        diagnostics.append(
+            {
+                "start_date": start_date,
+                "end_date": date,
+                "regime": regime_value,
+                "selected_strategy": selected_strategy,
+                "period_return": selected_return,
             }
         )
 
@@ -264,10 +412,13 @@ def collar_overlay_returns(
 def build_overlay_return_table(
     prices: pd.Series,
     returns: pd.Series,
+    regime: Optional[pd.Series] = None,
     maturity_days: int = 21,
+    transaction_cost_bps: float = 5.0,
 ) -> pd.DataFrame:
     """
-    Build a comparison table with passive, covered call, and collar returns.
+    Build a comparison table with passive, covered call, collar, and optional
+    stress-aware overlay returns.
 
     Returns are evaluated on the same rebalance dates to make comparison fair.
     """
@@ -275,18 +426,22 @@ def build_overlay_return_table(
         prices=prices,
         returns=returns,
         maturity_days=maturity_days,
+        transaction_cost_bps=transaction_cost_bps,
     )
 
     collar = collar_overlay_returns(
         prices=prices,
         returns=returns,
         maturity_days=maturity_days,
+        transaction_cost_bps=transaction_cost_bps,
     )
 
     rebalance_index = covered_call.returns.index.intersection(collar.returns.index)
 
-    passive_period_returns = (
-        prices.loc[rebalance_index].pct_change().rename("passive_brazil_equity")
+    passive_period_returns = build_passive_period_returns(
+        prices=prices,
+        rebalance_index=rebalance_index,
+        name="passive_brazil_equity",
     )
 
     overlay_table = pd.concat(
@@ -297,5 +452,20 @@ def build_overlay_return_table(
         ],
         axis=1,
     ).dropna()
+
+    if regime is not None:
+        stress_aware = stress_aware_overlay_returns(
+            overlay_returns=overlay_table,
+            covered_call_diagnostics=covered_call.diagnostics,
+            regime=regime,
+        )
+
+        overlay_table = pd.concat(
+            [
+                overlay_table,
+                stress_aware.returns["stress_aware_overlay"],
+            ],
+            axis=1,
+        ).dropna()
 
     return overlay_table

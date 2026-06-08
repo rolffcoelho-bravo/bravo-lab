@@ -2,7 +2,7 @@
 
 **Subtitle:** Brazilian Equity Risk, Volatility Transmission, and Synthetic Protection Logic
 
-Generated at: **2026-06-08 18:37:28 UTC**
+Generated at: **2026-06-08 18:53:47 UTC**
 
 Data window: **2014-01-02 to 2026-06-08**
 
@@ -12,9 +12,9 @@ Target report length: **10 to 12 PDF pages**
 
 **Current regime:** `stress`
 
-**Latest realized volatility:** 16.40%
+**Latest realized volatility:** 16.41%
 
-**Latest drawdown:** -15.23%
+**Latest drawdown:** -15.17%
 
 **Decision bias:** Protection bias. The current signal gives more weight to drawdown control than to full upside capture. The strongest drawdown profile is currently `collar`. The strongest risk-adjusted profile is currently `collar`.
 
@@ -78,9 +78,9 @@ machine learning.
 
 Latest classified regime: **stress**
 
-Latest realized volatility: **16.40%**
+Latest realized volatility: **16.41%**
 
-Latest drawdown: **-15.23%**
+Latest drawdown: **-15.17%**
 
 ### Regime Distribution
 
@@ -101,41 +101,48 @@ overlay discussion is taking place in a calm, fragile, or stressed environment.
 | Asset | Ann. Return | Ann. Volatility | Sharpe | Sortino | Max Drawdown | VaR 95% | CVaR 95% | Obs. |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | brazil_equity | 9.92% | 23.14% | 0.525 | 0.686 | -46.93% | -2.21% | -3.28% | 3238 |
-| fx_usdbrl | 6.31% | 16.45% | 0.454 | 0.701 | -26.80% | -1.59% | -2.23% | 3238 |
-| brazil_external | 2.58% | 33.91% | 0.247 | 0.324 | -66.54% | -3.30% | -4.84% | 3238 |
-| global_equity | 13.33% | 16.92% | 0.824 | 0.987 | -33.72% | -1.60% | -2.59% | 3238 |
-| vix | 2.05% | 133.48% | 0.623 | 1.273 | -85.66% | -10.53% | -14.21% | 3238 |
+| fx_usdbrl | 6.13% | 16.44% | 0.444 | 0.684 | -26.80% | -1.59% | -2.23% | 3238 |
+| brazil_external | 2.57% | 33.91% | 0.246 | 0.323 | -66.54% | -3.30% | -4.84% | 3238 |
+| global_equity | 13.32% | 16.92% | 0.824 | 0.987 | -33.72% | -1.60% | -2.59% | 3238 |
+| vix | 2.08% | 133.48% | 0.623 | 1.273 | -85.66% | -10.53% | -14.21% | 3238 |
 
 ## 7. Synthetic Overlay Results
 
-The first overlay engine compares three exposures:
+The first overlay engine compares four exposures:
 
 - passive Brazilian equity exposure
 - synthetic covered call overlay
 - synthetic protective collar overlay
+- stress-aware overlay switching
 
-The engine uses a 21-trading-day rebalance approximation and synthetic
-Black-Scholes option premiums. It does not claim live tradability. It is a
-controlled research baseline before adding real B3 option chains, transaction
-costs, taxes, liquidity, and execution constraints.
+The engine uses a 21-trading-day rebalance approximation, synthetic
+Black-Scholes option premiums, and a transaction-cost assumption of
+**5.0 basis points per option leg**.
+
+The stress-aware overlay maps regimes into actions: passive exposure in calm
+conditions, covered call income in fragile conditions, and collar protection in
+stress or extreme-stress conditions. It does not claim live tradability. It is a
+controlled research baseline before adding real B3 option chains, taxes,
+liquidity, and execution constraints.
 
 Returns in this section are approximately monthly strategy-period returns,
 annualized using **12.0 periods per year**.
 
 | Strategy | Ann. Return | Ann. Volatility | Sharpe | Max Drawdown | Best Period | Worst Period | Obs. |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| passive_brazil_equity | 9.93% | 22.24% | 0.543 | -37.77% | 21.22% | -35.92% | 151 |
-| covered_call | 8.56% | 16.80% | 0.584 | -36.71% | 10.62% | -35.11% | 151 |
-| collar | 6.80% | 10.23% | 0.696 | -19.65% | 4.21% | -4.66% | 151 |
+| passive_brazil_equity | 9.93% | 22.24% | 0.544 | -37.77% | 21.22% | -35.92% | 151 |
+| covered_call | 7.92% | 16.80% | 0.549 | -36.79% | 10.57% | -35.16% | 151 |
+| collar | 5.54% | 10.23% | 0.580 | -21.49% | 4.11% | -4.76% | 151 |
+| stress_aware_overlay | 6.80% | 13.62% | 0.552 | -23.01% | 10.58% | -14.33% | 151 |
 
 ## 8. Overlay Decision Matrix
 
 | Strategy | Best Use | Main Risk | Portfolio Reading |
 | --- | --- | --- | --- |
 | Passive Brazilian Equity | Clean trend, calm regime, strong rebound | Full downside exposure | Use when upside participation matters more than protection |
-| Covered Call | Elevated volatility, range-bound market, income objective | Upside is capped | Use when premium harvesting matters more than full upside capture |
+| Covered Call | Fragile regime, elevated volatility, income objective | Upside is capped | Use when premium harvesting matters more than full upside capture |
 | Collar | Stress regime, drawdown pressure, capital preservation | Protection cost and capped upside | Use when left-tail control matters more than return maximization |
-| Future Stress-Aware Overlay | Regime-dependent switching | Model risk | Use only after validation, costs, and governance checks |
+| Stress-Aware Overlay | Regime-dependent switching | Model risk and signal timing | Uses passive in calm regimes, covered calls in fragile regimes, and collars in stress regimes |
 
 ## 9. Strategy Trade-Off
 
@@ -238,12 +245,11 @@ This report is intentionally clear about what it does not prove.
 The next upgrade should turn this from a static overlay comparison into a
 stress-aware decision engine:
 
-1. add transaction-cost assumptions
-2. calculate tracking error versus passive Brazilian equity
-3. add stress-aware switching between passive, covered call, and collar overlays
-4. isolate stress subperiod performance
-5. add diagnostics explaining when each strategy helps or hurts
-6. prepare the path for GARCH, MTV-GARCH, and Brazil Stress Transmission Index integration
+1. calculate tracking error versus passive Brazilian equity
+2. isolate stress subperiod performance
+3. add diagnostics explaining when each strategy helps or hurts
+4. test alternative transaction-cost levels
+5. prepare the path for GARCH, MTV-GARCH, and Brazil Stress Transmission Index integration
 
 ## Research Use Only
 

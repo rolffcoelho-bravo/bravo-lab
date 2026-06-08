@@ -303,9 +303,9 @@ def _strategy_decision_matrix() -> str:
     return """| Strategy | Best Use | Main Risk | Portfolio Reading |
 | --- | --- | --- | --- |
 | Passive Brazilian Equity | Clean trend, calm regime, strong rebound | Full downside exposure | Use when upside participation matters more than protection |
-| Covered Call | Elevated volatility, range-bound market, income objective | Upside is capped | Use when premium harvesting matters more than full upside capture |
+| Covered Call | Fragile regime, elevated volatility, income objective | Upside is capped | Use when premium harvesting matters more than full upside capture |
 | Collar | Stress regime, drawdown pressure, capital preservation | Protection cost and capped upside | Use when left-tail control matters more than return maximization |
-| Future Stress-Aware Overlay | Regime-dependent switching | Model risk | Use only after validation, costs, and governance checks |"""
+| Stress-Aware Overlay | Regime-dependent switching | Model risk and signal timing | Uses passive in calm regimes, covered calls in fragile regimes, and collars in stress regimes |"""
 
 
 def _results_swot() -> str:
@@ -361,12 +361,15 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
 
     maturity_days = 21
     periods_per_year = 252 / maturity_days
+    transaction_cost_bps = 5.0
 
     overlay_returns = build_overlay_return_table(
-        prices=data.prices["brazil_equity"],
-        returns=data.returns["brazil_equity"],
-        maturity_days=maturity_days,
-    )
+    prices=data.prices["brazil_equity"],
+    returns=data.returns["brazil_equity"],
+    regime=regime_table["regime"],
+    maturity_days=maturity_days,
+    transaction_cost_bps=transaction_cost_bps,
+)
 
     overlay_summary = _summarize_periodic_strategy_returns(
         returns=overlay_returns,
@@ -490,16 +493,22 @@ overlay discussion is taking place in a calm, fragile, or stressed environment.
 
 ## 7. Synthetic Overlay Results
 
-The first overlay engine compares three exposures:
+The first overlay engine compares four exposures:
 
 - passive Brazilian equity exposure
 - synthetic covered call overlay
 - synthetic protective collar overlay
+- stress-aware overlay switching
 
-The engine uses a 21-trading-day rebalance approximation and synthetic
-Black-Scholes option premiums. It does not claim live tradability. It is a
-controlled research baseline before adding real B3 option chains, transaction
-costs, taxes, liquidity, and execution constraints.
+The engine uses a 21-trading-day rebalance approximation, synthetic
+Black-Scholes option premiums, and a transaction-cost assumption of
+**{transaction_cost_bps:.1f} basis points per option leg**.
+
+The stress-aware overlay maps regimes into actions: passive exposure in calm
+conditions, covered call income in fragile conditions, and collar protection in
+stress or extreme-stress conditions. It does not claim live tradability. It is a
+controlled research baseline before adding real B3 option chains, taxes,
+liquidity, and execution constraints.
 
 Returns in this section are approximately monthly strategy-period returns,
 annualized using **{periods_per_year:.1f} periods per year**.
@@ -592,12 +601,11 @@ This report is intentionally clear about what it does not prove.
 The next upgrade should turn this from a static overlay comparison into a
 stress-aware decision engine:
 
-1. add transaction-cost assumptions
-2. calculate tracking error versus passive Brazilian equity
-3. add stress-aware switching between passive, covered call, and collar overlays
-4. isolate stress subperiod performance
-5. add diagnostics explaining when each strategy helps or hurts
-6. prepare the path for GARCH, MTV-GARCH, and Brazil Stress Transmission Index integration
+1. calculate tracking error versus passive Brazilian equity
+2. isolate stress subperiod performance
+3. add diagnostics explaining when each strategy helps or hurts
+4. test alternative transaction-cost levels
+5. prepare the path for GARCH, MTV-GARCH, and Brazil Stress Transmission Index integration
 
 ## Research Use Only
 
