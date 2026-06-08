@@ -1,12 +1,20 @@
 """
-Regime, stress-window, and strategy help-hurt diagnostics for BRAVO Lab.
+Diagnostics layer for BRAVO Lab.
 
-This module evaluates whether overlay strategies work when they matter most:
-during fragile, stress, and extreme-stress market regimes.
+This module contains portfolio-governance diagnostics for Brazilian equity
+overlay research, including:
 
-It also explains when each overlay helps or hurts relative to passive Brazilian
-equity exposure. The purpose is to move beyond full-sample performance and test
-the decision logic under market pressure.
+- regime-level performance
+- stress-window performance
+- help-hurt diagnostics
+- implementation-drag diagnostics
+- active risk by regime
+- drawdown-depth diagnostics
+- recovery-window diagnostics
+- model-implied option overlay attribution
+
+The option attribution layer is synthetic and model-implied. It does not claim
+to represent actual traded B3 option-chain prices.
 """
 
 from __future__ import annotations
@@ -20,11 +28,7 @@ def align_regime_to_strategy_dates(
     regime: pd.Series,
 ) -> pd.Series:
     """
-    Align daily regime labels to strategy return dates.
-
-    The overlay engine produces periodic returns, usually every 21 trading days.
-    The regime table is daily. This function assigns the most recent available
-    regime to each strategy return date.
+    Align daily regime labels to periodic strategy return dates.
     """
     if strategy_returns.empty:
         return pd.Series(dtype="object")
@@ -49,9 +53,6 @@ def regime_performance_summary(
 ) -> pd.DataFrame:
     """
     Summarize strategy behavior by regime.
-
-    This table shows whether a strategy behaves differently in calm, fragile,
-    stress, and extreme-stress environments.
     """
     aligned_regime = align_regime_to_strategy_dates(strategy_returns, regime)
 
@@ -82,20 +83,6 @@ def regime_performance_summary(
                 }
             )
 
-    if not rows:
-        return pd.DataFrame(
-            columns=[
-                "regime",
-                "strategy",
-                "average_period_return",
-                "median_period_return",
-                "best_period",
-                "worst_period",
-                "positive_hit_rate",
-                "observations",
-            ]
-        )
-
     return pd.DataFrame(rows)
 
 
@@ -107,9 +94,6 @@ def stress_window_summary(
 ) -> pd.DataFrame:
     """
     Evaluate strategy behavior only during stress regimes.
-
-    This is the key table for portfolio review because it asks whether overlays
-    help when passive exposure is under pressure.
     """
     aligned_regime = align_regime_to_strategy_dates(strategy_returns, regime)
 
@@ -118,23 +102,11 @@ def stress_window_summary(
 
     stress_data = combined[combined["regime"].isin(stress_regimes)].dropna()
 
-    rows = []
-
     if stress_data.empty:
-        return pd.DataFrame(
-            columns=[
-                "strategy",
-                "average_stress_return",
-                "median_stress_return",
-                "worst_stress_return",
-                "best_stress_return",
-                "hit_rate_vs_passive_in_stress",
-                "downside_protection_rate",
-                "observations",
-            ]
-        )
+        return pd.DataFrame()
 
     benchmark = stress_data[benchmark_column]
+    rows = []
 
     for strategy in [col for col in stress_data.columns if col != "regime"]:
         series = stress_data[strategy].dropna()
@@ -221,14 +193,6 @@ def strategy_help_hurt_diagnostics(
 ) -> pd.DataFrame:
     """
     Diagnose when each overlay helps or hurts versus passive exposure.
-
-    This table separates active performance into:
-    - periods when passive exposure is positive
-    - periods when passive exposure is negative
-    - periods when the overlay beats passive
-    - periods when the overlay lags passive
-
-    The goal is to explain the trade-off, not only rank strategies.
     """
     if benchmark_column not in strategy_returns.columns:
         raise KeyError(f"Benchmark column not found: {benchmark_column}")
@@ -249,25 +213,10 @@ def strategy_help_hurt_diagnostics(
         ).dropna()
 
         if aligned.empty:
-            rows.append(
-                {
-                    "strategy": strategy,
-                    "avg_active_return": np.nan,
-                    "avg_active_when_passive_positive": np.nan,
-                    "avg_active_when_passive_negative": np.nan,
-                    "hit_rate_vs_passive": np.nan,
-                    "missed_upside_rate": np.nan,
-                    "downside_protection_rate": np.nan,
-                    "best_active_period": np.nan,
-                    "worst_active_period": np.nan,
-                    "primary_help_zone": "insufficient_data",
-                    "primary_hurt_zone": "insufficient_data",
-                    "observations": 0,
-                }
-            )
             continue
 
         active = aligned["strategy"] - aligned["benchmark"]
+
         passive_positive = aligned[aligned["benchmark"] > 0]
         passive_negative = aligned[aligned["benchmark"] < 0]
 
@@ -275,7 +224,9 @@ def strategy_help_hurt_diagnostics(
         missed_upside_rate = np.nan
 
         if not passive_positive.empty:
-            active_positive = passive_positive["strategy"] - passive_positive["benchmark"]
+            active_positive = (
+                passive_positive["strategy"] - passive_positive["benchmark"]
+            )
             avg_active_positive = active_positive.mean()
             missed_upside_rate = (
                 passive_positive["strategy"] < passive_positive["benchmark"]
@@ -285,7 +236,9 @@ def strategy_help_hurt_diagnostics(
         downside_protection_rate = np.nan
 
         if not passive_negative.empty:
-            active_negative = passive_negative["strategy"] - passive_negative["benchmark"]
+            active_negative = (
+                passive_negative["strategy"] - passive_negative["benchmark"]
+            )
             avg_active_negative = active_negative.mean()
             downside_protection_rate = (
                 passive_negative["strategy"] > passive_negative["benchmark"]
@@ -342,15 +295,10 @@ def strategy_help_hurt_interpretation(help_hurt: pd.DataFrame) -> str:
     valid_downside = help_hurt["downside_protection_rate"].dropna()
     valid_upside_drag = help_hurt["missed_upside_rate"].dropna()
 
-    if valid_downside.empty:
-        best_downside = "NA"
-    else:
-        best_downside = str(valid_downside.idxmax())
-
-    if valid_upside_drag.empty:
-        highest_upside_drag = "NA"
-    else:
-        highest_upside_drag = str(valid_upside_drag.idxmax())
+    best_downside = "NA" if valid_downside.empty else str(valid_downside.idxmax())
+    highest_upside_drag = (
+        "NA" if valid_upside_drag.empty else str(valid_upside_drag.idxmax())
+    )
 
     return (
         f"Help-hurt read: `{best_downside}` currently shows the strongest downside "
@@ -369,14 +317,6 @@ def implementation_drag_diagnostics(
 ) -> pd.DataFrame:
     """
     Separate gross overlay effect, transaction-cost drag, and net overlay effect.
-
-    Gross returns are strategy returns before transaction costs.
-    Net returns are strategy returns after transaction costs.
-    The difference between the two is the implementation drag.
-
-    This diagnostic does not yet decompose every option leg into premium income,
-    payoff, and moneyness attribution. It is the intermediate institutional layer
-    that shows whether the overlay survives realistic implementation costs.
     """
     if benchmark_column not in gross_strategy_returns.columns:
         raise KeyError(f"Benchmark column not found in gross returns: {benchmark_column}")
@@ -391,7 +331,6 @@ def implementation_drag_diagnostics(
     net = net_strategy_returns.loc[common_index, common_columns]
 
     benchmark = net[benchmark_column]
-
     rows = []
 
     for strategy in common_columns:
@@ -475,15 +414,10 @@ def implementation_drag_interpretation(implementation_summary: pd.DataFrame) -> 
     valid_net = implementation_summary["avg_net_active_return"].dropna()
     valid_drag_ratio = implementation_summary["drag_to_gross_signal"].dropna()
 
-    if valid_net.empty:
-        best_net = "NA"
-    else:
-        best_net = str(valid_net.idxmax())
-
-    if valid_drag_ratio.empty:
-        most_cost_sensitive = "NA"
-    else:
-        most_cost_sensitive = str(valid_drag_ratio.idxmax())
+    best_net = "NA" if valid_net.empty else str(valid_net.idxmax())
+    most_cost_sensitive = (
+        "NA" if valid_drag_ratio.empty else str(valid_drag_ratio.idxmax())
+    )
 
     return (
         f"Implementation read: `{best_net}` currently shows the strongest average "
@@ -503,12 +437,6 @@ def active_risk_by_regime(
 ) -> pd.DataFrame:
     """
     Calculate active risk diagnostics by regime.
-
-    This shows where each overlay creates tracking error versus passive exposure:
-    calm markets, fragile markets, stress markets, or extreme-stress markets.
-
-    The purpose is portfolio governance. A strategy can have attractive full-sample
-    active return while creating unacceptable active risk in the wrong regime.
     """
     if benchmark_column not in strategy_returns.columns:
         raise KeyError(f"Benchmark column not found: {benchmark_column}")
@@ -523,7 +451,9 @@ def active_risk_by_regime(
     for regime_name, regime_data in combined.groupby("regime"):
         benchmark = regime_data[benchmark_column].dropna()
 
-        for strategy in [col for col in regime_data.columns if col not in ["regime", benchmark_column]]:
+        for strategy in [
+            col for col in regime_data.columns if col not in ["regime", benchmark_column]
+        ]:
             aligned = pd.concat(
                 {
                     "strategy": regime_data[strategy],
@@ -537,7 +467,6 @@ def active_risk_by_regime(
 
             active = aligned["strategy"] - aligned["benchmark"]
             tracking_error = active.std(ddof=1) * np.sqrt(periods_per_year)
-
             annualized_active_return = active.mean() * periods_per_year
 
             information_ratio = np.nan
@@ -569,23 +498,6 @@ def active_risk_by_regime(
                     "observations": len(aligned),
                 }
             )
-
-    if not rows:
-        return pd.DataFrame(
-            columns=[
-                "regime",
-                "strategy",
-                "annualized_active_return",
-                "tracking_error",
-                "information_ratio",
-                "hit_rate_vs_passive",
-                "downside_hit_rate",
-                "avg_period_active_return",
-                "best_active_period",
-                "worst_active_period",
-                "observations",
-            ]
-        )
 
     return pd.DataFrame(rows)
 
@@ -634,10 +546,6 @@ def benchmark_drawdown_state(
 ) -> pd.DataFrame:
     """
     Build benchmark drawdown states from periodic returns.
-
-    The output classifies each period into drawdown-depth buckets and flags
-    recovery windows. A recovery window is a period where the benchmark is still
-    below its prior peak but is rebounding with a positive return.
     """
     returns = benchmark_returns.dropna().copy()
 
@@ -678,10 +586,6 @@ def drawdown_depth_diagnostics(
 ) -> pd.DataFrame:
     """
     Evaluate strategy behavior by benchmark drawdown depth.
-
-    This diagnostic asks whether overlays help during shallow, moderate, and
-    deep drawdowns. It also shows whether the strategy creates active drag near
-    market peaks.
     """
     if benchmark_column not in strategy_returns.columns:
         raise KeyError(f"Benchmark column not found: {benchmark_column}")
@@ -736,22 +640,6 @@ def drawdown_depth_diagnostics(
                 }
             )
 
-    if not rows:
-        return pd.DataFrame(
-            columns=[
-                "drawdown_bucket",
-                "strategy",
-                "avg_strategy_return",
-                "avg_benchmark_return",
-                "avg_active_return",
-                "hit_rate_vs_passive",
-                "downside_protection_rate",
-                "best_active_period",
-                "worst_active_period",
-                "observations",
-            ]
-        )
-
     return pd.DataFrame(rows)
 
 
@@ -761,9 +649,6 @@ def recovery_window_diagnostics(
 ) -> pd.DataFrame:
     """
     Evaluate strategy behavior during benchmark recovery windows.
-
-    Recovery windows are dangerous for hedged overlays because protection can
-    become a drag when the benchmark rebounds from a drawdown.
     """
     if benchmark_column not in strategy_returns.columns:
         raise KeyError(f"Benchmark column not found: {benchmark_column}")
@@ -775,24 +660,11 @@ def recovery_window_diagnostics(
         strategy_returns.index.intersection(recovery_dates)
     ]
 
-    rows = []
-
     if recovery_data.empty:
-        return pd.DataFrame(
-            columns=[
-                "strategy",
-                "avg_strategy_return",
-                "avg_benchmark_return",
-                "avg_active_return_in_recovery",
-                "hit_rate_vs_passive_in_recovery",
-                "missed_recovery_rate",
-                "best_active_recovery_period",
-                "worst_active_recovery_period",
-                "observations",
-            ]
-        )
+        return pd.DataFrame()
 
     benchmark = recovery_data[benchmark_column]
+    rows = []
 
     for strategy in [col for col in strategy_returns.columns if col != benchmark_column]:
         aligned = pd.concat(
@@ -843,9 +715,11 @@ def drawdown_recovery_interpretation(
             "before this layer can be interpreted."
         )
 
-    deep = drawdown_summary[
-        drawdown_summary["drawdown_bucket"] == "deep_drawdown"
-    ] if not drawdown_summary.empty else pd.DataFrame()
+    deep = (
+        drawdown_summary[drawdown_summary["drawdown_bucket"] == "deep_drawdown"]
+        if not drawdown_summary.empty
+        else pd.DataFrame()
+    )
 
     if deep.empty:
         best_deep = "NA"
@@ -854,7 +728,12 @@ def drawdown_recovery_interpretation(
         best_deep = (
             "NA"
             if valid_deep.empty
-            else str(valid_deep.loc[valid_deep["avg_active_return"].idxmax(), "strategy"])
+            else str(
+                valid_deep.loc[
+                    valid_deep["avg_active_return"].idxmax(),
+                    "strategy",
+                ]
+            )
         )
 
     if recovery_summary.empty:
@@ -882,3 +761,321 @@ def drawdown_recovery_interpretation(
         "during the fall, but it must not destroy too much of the rebound."
     )
 
+
+def _option_attr_normal_cdf(x: float) -> float:
+    """
+    Standard normal cumulative distribution function.
+    """
+    from math import erf, sqrt
+
+    return 0.5 * (1.0 + erf(x / sqrt(2.0)))
+
+
+def _option_attr_black_scholes_price(
+    spot: float,
+    strike: float,
+    maturity_years: float,
+    annualized_volatility: float,
+    risk_free_rate_annual: float = 0.0,
+    option_type: str = "call",
+) -> float:
+    """
+    Minimal Black-Scholes option price used for attribution diagnostics.
+
+    This is intentionally local, dependency-light, and transparent. It is used
+    only to create model-implied option attribution for the synthetic overlay
+    engine. It does not claim to represent actual traded B3 option-chain prices.
+    """
+    from math import exp, log, sqrt
+
+    if spot <= 0 or strike <= 0:
+        return np.nan
+
+    if maturity_years <= 0 or annualized_volatility <= 0:
+        if option_type == "call":
+            return max(spot - strike, 0.0)
+        if option_type == "put":
+            return max(strike - spot, 0.0)
+        raise ValueError(f"Unknown option type: {option_type}")
+
+    d1 = (
+        log(spot / strike)
+        + (risk_free_rate_annual + 0.5 * annualized_volatility**2) * maturity_years
+    ) / (annualized_volatility * sqrt(maturity_years))
+
+    d2 = d1 - annualized_volatility * sqrt(maturity_years)
+
+    if option_type == "call":
+        return (
+            spot * _option_attr_normal_cdf(d1)
+            - strike
+            * exp(-risk_free_rate_annual * maturity_years)
+            * _option_attr_normal_cdf(d2)
+        )
+
+    if option_type == "put":
+        return (
+            strike
+            * exp(-risk_free_rate_annual * maturity_years)
+            * _option_attr_normal_cdf(-d2)
+            - spot * _option_attr_normal_cdf(-d1)
+        )
+
+    raise ValueError(f"Unknown option type: {option_type}")
+
+
+def _option_attr_regime_at_date(
+    regime: pd.Series | None,
+    date: pd.Timestamp,
+) -> str:
+    """
+    Get the most recent regime available at a rebalance date.
+    """
+    if regime is None or regime.empty:
+        return "neutral"
+
+    clean_regime = regime.dropna().sort_index()
+    available = clean_regime.loc[clean_regime.index <= date]
+
+    if available.empty:
+        return "neutral"
+
+    return str(available.iloc[-1])
+
+
+def _option_attr_strategy_for_regime(regime_name: str) -> str:
+    """
+    Map regime labels to the stress-aware overlay decision rule.
+    """
+    if regime_name == "calm":
+        return "passive_brazil_equity"
+
+    if regime_name == "fragile":
+        return "covered_call"
+
+    if regime_name in {"stress", "extreme_stress"}:
+        return "collar"
+
+    return "passive_brazil_equity"
+
+
+def option_overlay_attribution(
+    prices: pd.Series,
+    returns: pd.Series,
+    regime: pd.Series | None = None,
+    maturity_days: int = 21,
+    transaction_cost_bps: float = 5.0,
+    call_moneyness: float = 1.03,
+    put_moneyness: float = 0.97,
+    volatility_window: int = 63,
+    trading_days_per_year: int = 252,
+    risk_free_rate_annual: float = 0.0,
+) -> pd.DataFrame:
+    """
+    Build model-implied attribution for synthetic option overlays.
+    """
+    clean_prices = prices.dropna().sort_index()
+    clean_returns = returns.dropna().sort_index()
+
+    if clean_prices.empty or len(clean_prices) <= maturity_days:
+        return pd.DataFrame()
+
+    global_volatility = clean_returns.std(ddof=1) * np.sqrt(trading_days_per_year)
+
+    if np.isnan(global_volatility) or global_volatility <= 0:
+        global_volatility = 0.25
+
+    rows = []
+
+    for start_position in range(0, len(clean_prices) - maturity_days, maturity_days):
+        end_position = start_position + maturity_days
+
+        start_date = clean_prices.index[start_position]
+        end_date = clean_prices.index[end_position]
+
+        start_price = float(clean_prices.iloc[start_position])
+        end_price = float(clean_prices.iloc[end_position])
+
+        if start_price <= 0:
+            continue
+
+        underlying_return = end_price / start_price - 1.0
+
+        volatility_sample = clean_returns.loc[
+            clean_returns.index <= start_date
+        ].tail(volatility_window)
+
+        annualized_volatility = volatility_sample.std(ddof=1) * np.sqrt(
+            trading_days_per_year
+        )
+
+        if np.isnan(annualized_volatility) or annualized_volatility <= 0:
+            annualized_volatility = global_volatility
+
+        maturity_years = maturity_days / trading_days_per_year
+
+        call_strike = start_price * call_moneyness
+        put_strike = start_price * put_moneyness
+
+        call_premium = _option_attr_black_scholes_price(
+            spot=start_price,
+            strike=call_strike,
+            maturity_years=maturity_years,
+            annualized_volatility=annualized_volatility,
+            risk_free_rate_annual=risk_free_rate_annual,
+            option_type="call",
+        )
+
+        put_premium = _option_attr_black_scholes_price(
+            spot=start_price,
+            strike=put_strike,
+            maturity_years=maturity_years,
+            annualized_volatility=annualized_volatility,
+            risk_free_rate_annual=risk_free_rate_annual,
+            option_type="put",
+        )
+
+        call_premium_fraction = call_premium / start_price
+        put_premium_fraction = put_premium / start_price
+
+        call_payoff_fraction = max(end_price - call_strike, 0.0) / start_price
+        put_payoff_fraction = max(put_strike - end_price, 0.0) / start_price
+
+        one_leg_cost = transaction_cost_bps / 10000.0
+        two_leg_cost = 2.0 * one_leg_cost
+
+        regime_name = _option_attr_regime_at_date(regime, start_date)
+        stress_strategy = _option_attr_strategy_for_regime(regime_name)
+
+        period_specs = [
+            {
+                "strategy": "covered_call",
+                "selected_component": "covered_call",
+                "option_legs": 1,
+                "premium_income": call_premium_fraction,
+                "protection_cost": 0.0,
+                "payoff_effect": -call_payoff_fraction,
+                "implementation_drag": -one_leg_cost,
+            },
+            {
+                "strategy": "collar",
+                "selected_component": "collar",
+                "option_legs": 2,
+                "premium_income": call_premium_fraction,
+                "protection_cost": -put_premium_fraction,
+                "payoff_effect": put_payoff_fraction - call_payoff_fraction,
+                "implementation_drag": -two_leg_cost,
+            },
+        ]
+
+        if stress_strategy == "covered_call":
+            stress_spec = period_specs[0].copy()
+        elif stress_strategy == "collar":
+            stress_spec = period_specs[1].copy()
+        else:
+            stress_spec = {
+                "strategy": "stress_aware_overlay",
+                "selected_component": "passive_brazil_equity",
+                "option_legs": 0,
+                "premium_income": 0.0,
+                "protection_cost": 0.0,
+                "payoff_effect": 0.0,
+                "implementation_drag": 0.0,
+            }
+
+        stress_spec["strategy"] = "stress_aware_overlay"
+        period_specs.append(stress_spec)
+
+        for spec in period_specs:
+            gross_overlay_effect = (
+                spec["premium_income"]
+                + spec["protection_cost"]
+                + spec["payoff_effect"]
+            )
+
+            net_overlay_effect = gross_overlay_effect + spec["implementation_drag"]
+            net_strategy_return = underlying_return + net_overlay_effect
+
+            rows.append(
+                {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "strategy": spec["strategy"],
+                    "selected_component": spec["selected_component"],
+                    "regime": regime_name,
+                    "start_price": start_price,
+                    "end_price": end_price,
+                    "underlying_return": underlying_return,
+                    "annualized_volatility": annualized_volatility,
+                    "call_premium_income": spec["premium_income"],
+                    "put_protection_cost": spec["protection_cost"],
+                    "option_payoff_effect": spec["payoff_effect"],
+                    "implementation_drag": spec["implementation_drag"],
+                    "gross_overlay_effect": gross_overlay_effect,
+                    "net_overlay_effect": net_overlay_effect,
+                    "net_strategy_return": net_strategy_return,
+                    "option_legs": spec["option_legs"],
+                }
+            )
+
+    return pd.DataFrame(rows)
+
+
+def option_overlay_attribution_summary(
+    attribution: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Summarize model-implied option attribution by strategy.
+    """
+    if attribution.empty:
+        return pd.DataFrame()
+
+    rows = []
+
+    for strategy, data in attribution.groupby("strategy"):
+        rows.append(
+            {
+                "strategy": strategy,
+                "avg_underlying_return": data["underlying_return"].mean(),
+                "avg_call_premium_income": data["call_premium_income"].mean(),
+                "avg_put_protection_cost": data["put_protection_cost"].mean(),
+                "avg_option_payoff_effect": data["option_payoff_effect"].mean(),
+                "avg_implementation_drag": data["implementation_drag"].mean(),
+                "avg_gross_overlay_effect": data["gross_overlay_effect"].mean(),
+                "avg_net_overlay_effect": data["net_overlay_effect"].mean(),
+                "avg_net_strategy_return": data["net_strategy_return"].mean(),
+                "positive_net_overlay_rate": (data["net_overlay_effect"] > 0).mean(),
+                "observations": len(data),
+            }
+        )
+
+    return pd.DataFrame(rows).set_index("strategy")
+
+
+def option_overlay_attribution_interpretation(summary: pd.DataFrame) -> str:
+    """
+    Produce a compact interpretation of model-implied option attribution.
+    """
+    if summary.empty:
+        return (
+            "No option-attribution diagnostics were available. The attribution layer "
+            "requires valid prices, returns, and synthetic overlay assumptions."
+        )
+
+    valid_net = summary["avg_net_overlay_effect"].dropna()
+    valid_premium = summary["avg_call_premium_income"].dropna()
+    valid_payoff = summary["avg_option_payoff_effect"].dropna()
+
+    best_net = "NA" if valid_net.empty else str(valid_net.idxmax())
+    largest_premium = "NA" if valid_premium.empty else str(valid_premium.idxmax())
+    strongest_payoff = "NA" if valid_payoff.empty else str(valid_payoff.idxmax())
+
+    return (
+        f"Option-attribution read: `{best_net}` currently shows the strongest "
+        "average net overlay effect after model-implied premium, payoff, protection "
+        "cost, and implementation drag. "
+        f"`{largest_premium}` generates the largest average call-premium income. "
+        f"`{strongest_payoff}` has the strongest average payoff contribution. "
+        "This is still synthetic attribution, not real B3 option-chain attribution, "
+        "but it makes the overlay engine explain why the strategy works or fails."
+    )

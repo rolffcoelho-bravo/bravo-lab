@@ -20,6 +20,9 @@ import pandas as pd
 from bravo.config import BASELINE_REPORT_PATH, PROCESSED_DATA_DIR, REPORTS_DIR, TICKERS
 from bravo.data import load_market_data
 from bravo.diagnostics import (
+    option_overlay_attribution,
+    option_overlay_attribution_interpretation,
+    option_overlay_attribution_summary,
     drawdown_depth_diagnostics,
     drawdown_recovery_interpretation,
     recovery_window_diagnostics,
@@ -630,6 +633,51 @@ def _recovery_window_to_markdown(summary: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
+
+def _option_attribution_to_markdown(summary: pd.DataFrame) -> str:
+    headers = [
+        "Strategy",
+        "Avg. Underlying Return",
+        "Avg. Call Premium Income",
+        "Avg. Put Protection Cost",
+        "Avg. Option Payoff Effect",
+        "Avg. Implementation Drag",
+        "Avg. Gross Overlay Effect",
+        "Avg. Net Overlay Effect",
+        "Avg. Net Strategy Return",
+        "Positive Net Overlay Rate",
+        "Obs.",
+    ]
+
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+
+    for strategy, row in summary.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(strategy),
+                    _format_percentage(row["avg_underlying_return"]),
+                    _format_percentage(row["avg_call_premium_income"]),
+                    _format_percentage(row["avg_put_protection_cost"]),
+                    _format_percentage(row["avg_option_payoff_effect"]),
+                    _format_percentage(row["avg_implementation_drag"]),
+                    _format_percentage(row["avg_gross_overlay_effect"]),
+                    _format_percentage(row["avg_net_overlay_effect"]),
+                    _format_percentage(row["avg_net_strategy_return"]),
+                    _format_percentage(row["positive_net_overlay_rate"]),
+                    str(int(row["observations"])),
+                ]
+            )
+            + " |"
+        )
+
+    return "\n".join(lines)
+
+
 def _data_provenance_table(
     prices: pd.DataFrame,
     returns: pd.DataFrame,
@@ -934,8 +982,9 @@ def _report_structure() -> str:
 | 11 | Regime and Stress Diagnostics | Tests whether the overlay helps when market pressure rises |
 | 12 | Strategy Help-Hurt Diagnostics | Explains when each overlay adds value or creates drag |
 | 13 | Implementation Drag Diagnostics | Separates gross signal, cost drag, and net overlay effect |
-| 14 | Overlay Decision Matrix | When each strategy is useful or dangerous |
-| 15 to 16 | Results SWOT | How to cope with the signal before portfolio action |
+| 14 | Option Overlay Attribution | Separates premium, protection cost, payoff, drag, and net effect |
+| 15 | Overlay Decision Matrix | When each strategy is useful or dangerous |
+| 16 to 17 | Results SWOT | How to cope with the signal before portfolio action |
 | 13 | ShockBridge Transmission Read | How stress moves into the book |
 | 14 | What To Watch Next | Confirmation signals and warning signals |
 | 15 | Model Limits and Evidence Files | What is proven, what is not, and what comes next |"""
@@ -1040,6 +1089,22 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
 
     implementation_read = implementation_drag_interpretation(implementation_summary)
 
+    option_attribution = option_overlay_attribution(
+        prices=data.prices["brazil_equity"],
+        returns=data.returns["brazil_equity"],
+        regime=regime_table["regime"],
+        maturity_days=maturity_days,
+        transaction_cost_bps=5.0,
+    )
+
+    option_attribution_summary_table = option_overlay_attribution_summary(
+        option_attribution
+    )
+
+    option_attribution_read = option_overlay_attribution_interpretation(
+        option_attribution_summary_table
+    )
+
     performance_summary_path = PROCESSED_DATA_DIR / "baseline_performance_summary.csv"
     regime_table_path = PROCESSED_DATA_DIR / "brazil_equity_regime_table.csv"
     overlay_returns_path = PROCESSED_DATA_DIR / "overlay_return_table.csv"
@@ -1053,6 +1118,8 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     stress_window_path = PROCESSED_DATA_DIR / "stress_window_summary.csv"
     help_hurt_path = PROCESSED_DATA_DIR / "strategy_help_hurt_summary.csv"
     implementation_drag_path = PROCESSED_DATA_DIR / "implementation_drag_summary.csv"
+    option_attribution_path = PROCESSED_DATA_DIR / "option_overlay_attribution.csv"
+    option_attribution_summary_path = PROCESSED_DATA_DIR / "option_overlay_attribution_summary.csv"
 
     performance_summary.to_csv(performance_summary_path)
     regime_table.to_csv(regime_table_path)
@@ -1067,6 +1134,8 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     stress_summary.to_csv(stress_window_path)
     help_hurt_summary.to_csv(help_hurt_path)
     implementation_summary.to_csv(implementation_drag_path)
+    option_attribution.to_csv(option_attribution_path, index=False)
+    option_attribution_summary_table.to_csv(option_attribution_summary_path)
 
     start_date = data.prices.index.min().date()
     end_date = data.prices.index.max().date()
@@ -1098,7 +1167,7 @@ Generated at: **{generated_at}**
 
 Data window: **{start_date} to {end_date}**
 
-Target report length: **18 to 20 PDF pages**
+Target report length: **19 to 21 PDF pages**
 
 ## 1. Executive Signal
 
@@ -1319,11 +1388,28 @@ layer showing whether the overlay signal survives implementation.
 
 {implementation_read}
 
-## 14. Overlay Decision Matrix
+## 14. Option Overlay Attribution
+
+This attribution layer explains why the synthetic option overlay worked or
+failed. It separates the model-implied return into premium income, protection
+cost, payoff effect, implementation drag, and net overlay effect.
+
+This is not real B3 option-chain attribution. It is model-implied attribution
+based on the synthetic Black-Scholes overlay engine used in this project. That
+disclosure is important because it keeps the research honest while still making
+the derivatives logic inspectable.
+
+{_option_attribution_to_markdown(option_attribution_summary_table)}
+
+### Option Attribution Interpretation
+
+{option_attribution_read}
+
+## 15. Overlay Decision Matrix
 
 {_strategy_decision_matrix()}
 
-## 15. Strategy Trade-Off
+## 16. Strategy Trade-Off
 
 **Best annualized return:** `{best_return}`
 
@@ -1345,13 +1431,13 @@ but their cost and upside cap must be justified by the current risk state.
 Stress-aware switching adds discipline, but only if the regime signal is stable
 enough to avoid unnecessary turnover.
 
-## 16. Results SWOT
+## 17. Results SWOT
 
 How to cope with the signal before turning it into a portfolio action.
 
 {_results_swot()}
 
-## 17. ShockBridge Transmission Read
+## 18. ShockBridge Transmission Read
 
 Brazilian equity does not trade in isolation. The book can be hit through local
 rates, fiscal repricing, FX pressure, global volatility, commodity shocks, and
@@ -1365,7 +1451,7 @@ The key insight is simple: volatility is not only a number. It is a carrier of
 stress. When volatility rises with drawdown, the book is not just moving. It is
 absorbing transmission.
 
-## 18. What To Watch Next
+## 19. What To Watch Next
 
 {watch_next}
 
@@ -1373,7 +1459,7 @@ The next model version should not simply add complexity. It should improve the
 decision. The immediate test is whether transaction costs, tracking error, and
 stress subperiod performance confirm or weaken the current overlay ranking.
 
-## 19. What Would Break This View
+## 20. What Would Break This View
 
 This baseline view should be challenged if one of the following happens:
 
@@ -1386,7 +1472,7 @@ This baseline view should be challenged if one of the following happens:
 7. The information ratio is positive in the full sample but weak during stress windows.
 8. Tracking error rises without clear drawdown reduction or active return compensation.
 
-## 20. Model Limits and Governance
+## 21. Model Limits and Governance
 
 This report is intentionally clear about what it does not prove.
 
@@ -1399,7 +1485,7 @@ This report is intentionally clear about what it does not prove.
 - Active risk diagnostics are useful but still require stress-window validation.
 - This is research infrastructure, not investment advice.
 
-## 21. Generated Evidence Files
+## 22. Generated Evidence Files
 
 - `{performance_summary_path}`
 - `{regime_table_path}`
@@ -1414,16 +1500,18 @@ This report is intentionally clear about what it does not prove.
 - `{stress_window_path}`
 - `{help_hurt_path}`
 - `{implementation_drag_path}`
+- `{option_attribution_path}`
+- `{option_attribution_summary_path}`
 - `{output_path}`
 
-## 22. Next Upgrade
+## 23. Next Upgrade
 
 The next upgrade should turn this from a stress-window decision memo into a
 more realistic implementation framework:
 
 1. test alternative transaction-cost levels
-2. decompose option overlays into premium income, payoff effect, and moneyness attribution
-3. integrate real B3 option-chain data when available
+2. validate synthetic attribution against real B3 option-chain data when available
+3. add option attribution by regime and drawdown bucket
 4. add drawdown duration and recovery-speed diagnostics
 5. prepare the path for GARCH, MTV-GARCH, and Brazil Stress Transmission Index integration
 
