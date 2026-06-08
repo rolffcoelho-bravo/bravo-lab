@@ -628,3 +628,257 @@ def active_risk_by_regime_interpretation(active_regime_summary: pd.DataFrame) ->
         "on average from a strategy that is governable under specific market states."
     )
 
+
+def benchmark_drawdown_state(
+    benchmark_returns: pd.Series,
+) -> pd.DataFrame:
+    """
+    Build benchmark drawdown states from periodic returns.
+
+    The output classifies each period into drawdown-depth buckets and flags
+    recovery windows. A recovery window is a period where the benchmark is still
+    below its prior peak but is rebounding with a positive return.
+    """
+    returns = benchmark_returns.dropna().copy()
+
+    cumulative = (1.0 + returns).cumprod()
+    running_peak = cumulative.cummax()
+    drawdown = cumulative / running_peak - 1.0
+
+    def classify_drawdown(value: float) -> str:
+        if value >= -0.02:
+            return "near_peak"
+        if value >= -0.05:
+            return "shallow_drawdown"
+        if value >= -0.10:
+            return "moderate_drawdown"
+        return "deep_drawdown"
+
+    state = pd.DataFrame(
+        {
+            "benchmark_return": returns,
+            "benchmark_cumulative": cumulative,
+            "benchmark_drawdown": drawdown,
+        }
+    )
+
+    state["drawdown_bucket"] = state["benchmark_drawdown"].apply(classify_drawdown)
+
+    state["recovery_window"] = (
+        (state["benchmark_return"] > 0.0)
+        & (state["benchmark_drawdown"] < -0.02)
+    )
+
+    return state
+
+
+def drawdown_depth_diagnostics(
+    strategy_returns: pd.DataFrame,
+    benchmark_column: str = "passive_brazil_equity",
+) -> pd.DataFrame:
+    """
+    Evaluate strategy behavior by benchmark drawdown depth.
+
+    This diagnostic asks whether overlays help during shallow, moderate, and
+    deep drawdowns. It also shows whether the strategy creates active drag near
+    market peaks.
+    """
+    if benchmark_column not in strategy_returns.columns:
+        raise KeyError(f"Benchmark column not found: {benchmark_column}")
+
+    state = benchmark_drawdown_state(strategy_returns[benchmark_column])
+
+    combined = strategy_returns.join(
+        state[["benchmark_return", "benchmark_drawdown", "drawdown_bucket"]],
+        how="inner",
+    )
+
+    rows = []
+
+    for bucket, bucket_data in combined.groupby("drawdown_bucket"):
+        benchmark = bucket_data[benchmark_column]
+
+        for strategy in [col for col in strategy_returns.columns if col != benchmark_column]:
+            aligned = pd.concat(
+                {
+                    "strategy": bucket_data[strategy],
+                    "benchmark": benchmark,
+                },
+                axis=1,
+            ).dropna()
+
+            if aligned.empty:
+                continue
+
+            active = aligned["strategy"] - aligned["benchmark"]
+            benchmark_negative = aligned[aligned["benchmark"] < 0]
+
+            downside_protection_rate = np.nan
+            if not benchmark_negative.empty:
+                downside_protection_rate = (
+                    benchmark_negative["strategy"] > benchmark_negative["benchmark"]
+                ).mean()
+
+            rows.append(
+                {
+                    "drawdown_bucket": bucket,
+                    "strategy": strategy,
+                    "avg_strategy_return": aligned["strategy"].mean(),
+                    "avg_benchmark_return": aligned["benchmark"].mean(),
+                    "avg_active_return": active.mean(),
+                    "hit_rate_vs_passive": (
+                        aligned["strategy"] > aligned["benchmark"]
+                    ).mean(),
+                    "downside_protection_rate": downside_protection_rate,
+                    "best_active_period": active.max(),
+                    "worst_active_period": active.min(),
+                    "observations": len(aligned),
+                }
+            )
+
+    if not rows:
+        return pd.DataFrame(
+            columns=[
+                "drawdown_bucket",
+                "strategy",
+                "avg_strategy_return",
+                "avg_benchmark_return",
+                "avg_active_return",
+                "hit_rate_vs_passive",
+                "downside_protection_rate",
+                "best_active_period",
+                "worst_active_period",
+                "observations",
+            ]
+        )
+
+    return pd.DataFrame(rows)
+
+
+def recovery_window_diagnostics(
+    strategy_returns: pd.DataFrame,
+    benchmark_column: str = "passive_brazil_equity",
+) -> pd.DataFrame:
+    """
+    Evaluate strategy behavior during benchmark recovery windows.
+
+    Recovery windows are dangerous for hedged overlays because protection can
+    become a drag when the benchmark rebounds from a drawdown.
+    """
+    if benchmark_column not in strategy_returns.columns:
+        raise KeyError(f"Benchmark column not found: {benchmark_column}")
+
+    state = benchmark_drawdown_state(strategy_returns[benchmark_column])
+    recovery_dates = state[state["recovery_window"]].index
+
+    recovery_data = strategy_returns.loc[
+        strategy_returns.index.intersection(recovery_dates)
+    ]
+
+    rows = []
+
+    if recovery_data.empty:
+        return pd.DataFrame(
+            columns=[
+                "strategy",
+                "avg_strategy_return",
+                "avg_benchmark_return",
+                "avg_active_return_in_recovery",
+                "hit_rate_vs_passive_in_recovery",
+                "missed_recovery_rate",
+                "best_active_recovery_period",
+                "worst_active_recovery_period",
+                "observations",
+            ]
+        )
+
+    benchmark = recovery_data[benchmark_column]
+
+    for strategy in [col for col in strategy_returns.columns if col != benchmark_column]:
+        aligned = pd.concat(
+            {
+                "strategy": recovery_data[strategy],
+                "benchmark": benchmark,
+            },
+            axis=1,
+        ).dropna()
+
+        if aligned.empty:
+            continue
+
+        active = aligned["strategy"] - aligned["benchmark"]
+
+        rows.append(
+            {
+                "strategy": strategy,
+                "avg_strategy_return": aligned["strategy"].mean(),
+                "avg_benchmark_return": aligned["benchmark"].mean(),
+                "avg_active_return_in_recovery": active.mean(),
+                "hit_rate_vs_passive_in_recovery": (
+                    aligned["strategy"] > aligned["benchmark"]
+                ).mean(),
+                "missed_recovery_rate": (
+                    aligned["strategy"] < aligned["benchmark"]
+                ).mean(),
+                "best_active_recovery_period": active.max(),
+                "worst_active_recovery_period": active.min(),
+                "observations": len(aligned),
+            }
+        )
+
+    return pd.DataFrame(rows).set_index("strategy")
+
+
+def drawdown_recovery_interpretation(
+    drawdown_summary: pd.DataFrame,
+    recovery_summary: pd.DataFrame,
+) -> str:
+    """
+    Produce a compact interpretation of drawdown-depth and recovery-window behavior.
+    """
+    if drawdown_summary.empty and recovery_summary.empty:
+        return (
+            "No drawdown-depth or recovery-window diagnostics were available. "
+            "The strategy return table needs valid benchmark and overlay returns "
+            "before this layer can be interpreted."
+        )
+
+    deep = drawdown_summary[
+        drawdown_summary["drawdown_bucket"] == "deep_drawdown"
+    ] if not drawdown_summary.empty else pd.DataFrame()
+
+    if deep.empty:
+        best_deep = "NA"
+    else:
+        valid_deep = deep.dropna(subset=["avg_active_return"])
+        best_deep = (
+            "NA"
+            if valid_deep.empty
+            else str(valid_deep.loc[valid_deep["avg_active_return"].idxmax(), "strategy"])
+        )
+
+    if recovery_summary.empty:
+        highest_recovery_drag = "NA"
+    else:
+        valid_recovery = recovery_summary.dropna(
+            subset=["avg_active_return_in_recovery"]
+        )
+
+        highest_recovery_drag = (
+            "NA"
+            if valid_recovery.empty
+            else str(
+                valid_recovery.loc[
+                    valid_recovery["avg_active_return_in_recovery"].idxmin()
+                ].name
+            )
+        )
+
+    return (
+        f"Drawdown-recovery read: `{best_deep}` shows the strongest average active "
+        "behavior during deep benchmark drawdowns. "
+        f"`{highest_recovery_drag}` shows the largest active drag during recovery "
+        "windows. This is the key hedge-governance trade-off: protection can help "
+        "during the fall, but it must not destroy too much of the rebound."
+    )
+

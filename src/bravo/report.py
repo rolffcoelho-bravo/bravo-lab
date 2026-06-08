@@ -20,6 +20,9 @@ import pandas as pd
 from bravo.config import BASELINE_REPORT_PATH, PROCESSED_DATA_DIR, REPORTS_DIR, TICKERS
 from bravo.data import load_market_data
 from bravo.diagnostics import (
+    drawdown_depth_diagnostics,
+    drawdown_recovery_interpretation,
+    recovery_window_diagnostics,
     active_risk_by_regime,
     active_risk_by_regime_interpretation,
     implementation_drag_diagnostics,
@@ -544,6 +547,89 @@ def _active_risk_by_regime_to_markdown(summary: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
+
+def _drawdown_depth_to_markdown(summary: pd.DataFrame) -> str:
+    headers = [
+        "Drawdown Bucket",
+        "Strategy",
+        "Avg. Strategy Return",
+        "Avg. Benchmark Return",
+        "Avg. Active Return",
+        "Hit Rate",
+        "Downside Protection Rate",
+        "Best Active Period",
+        "Worst Active Period",
+        "Obs.",
+    ]
+
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+
+    for _, row in summary.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(row["drawdown_bucket"]),
+                    str(row["strategy"]),
+                    _format_percentage(row["avg_strategy_return"]),
+                    _format_percentage(row["avg_benchmark_return"]),
+                    _format_percentage(row["avg_active_return"]),
+                    _format_percentage(row["hit_rate_vs_passive"]),
+                    _format_percentage(row["downside_protection_rate"]),
+                    _format_percentage(row["best_active_period"]),
+                    _format_percentage(row["worst_active_period"]),
+                    str(int(row["observations"])),
+                ]
+            )
+            + " |"
+        )
+
+    return "\n".join(lines)
+
+
+def _recovery_window_to_markdown(summary: pd.DataFrame) -> str:
+    headers = [
+        "Strategy",
+        "Avg. Strategy Return",
+        "Avg. Benchmark Return",
+        "Avg. Active in Recovery",
+        "Hit Rate in Recovery",
+        "Missed Recovery Rate",
+        "Best Active Recovery",
+        "Worst Active Recovery",
+        "Obs.",
+    ]
+
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+
+    for strategy, row in summary.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(strategy),
+                    _format_percentage(row["avg_strategy_return"]),
+                    _format_percentage(row["avg_benchmark_return"]),
+                    _format_percentage(row["avg_active_return_in_recovery"]),
+                    _format_percentage(row["hit_rate_vs_passive_in_recovery"]),
+                    _format_percentage(row["missed_recovery_rate"]),
+                    _format_percentage(row["best_active_recovery_period"]),
+                    _format_percentage(row["worst_active_recovery_period"]),
+                    str(int(row["observations"])),
+                ]
+            )
+            + " |"
+        )
+
+    return "\n".join(lines)
+
+
 def _data_provenance_table(
     prices: pd.DataFrame,
     returns: pd.DataFrame,
@@ -844,11 +930,12 @@ def _report_structure() -> str:
 | 7 | Synthetic Overlay Results | Passive versus covered call versus collar versus stress-aware overlay |
 | 8 | Active Risk Diagnostics | Tracks active return, tracking error, hit rate, and information ratio |
 | 9 | Active Risk by Regime | Shows where each overlay creates tracking error by market state |
-| 10 | Regime and Stress Diagnostics | Tests whether the overlay helps when market pressure rises |
-| 11 | Strategy Help-Hurt Diagnostics | Explains when each overlay adds value or creates drag |
-| 12 | Implementation Drag Diagnostics | Separates gross signal, cost drag, and net overlay effect |
-| 13 | Overlay Decision Matrix | When each strategy is useful or dangerous |
-| 14 to 15 | Results SWOT | How to cope with the signal before portfolio action |
+| 10 | Drawdown and Recovery Diagnostics | Tests behavior in drawdown depth and rebound windows |
+| 11 | Regime and Stress Diagnostics | Tests whether the overlay helps when market pressure rises |
+| 12 | Strategy Help-Hurt Diagnostics | Explains when each overlay adds value or creates drag |
+| 13 | Implementation Drag Diagnostics | Separates gross signal, cost drag, and net overlay effect |
+| 14 | Overlay Decision Matrix | When each strategy is useful or dangerous |
+| 15 to 16 | Results SWOT | How to cope with the signal before portfolio action |
 | 13 | ShockBridge Transmission Read | How stress moves into the book |
 | 14 | What To Watch Next | Confirmation signals and warning signals |
 | 15 | Model Limits and Evidence Files | What is proven, what is not, and what comes next |"""
@@ -910,6 +997,21 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
 
     active_regime_read = active_risk_by_regime_interpretation(active_regime_summary)
 
+    drawdown_depth_summary = drawdown_depth_diagnostics(
+        strategy_returns=overlay_returns,
+        benchmark_column="passive_brazil_equity",
+    )
+
+    recovery_window_summary = recovery_window_diagnostics(
+        strategy_returns=overlay_returns,
+        benchmark_column="passive_brazil_equity",
+    )
+
+    drawdown_recovery_read = drawdown_recovery_interpretation(
+        drawdown_summary=drawdown_depth_summary,
+        recovery_summary=recovery_window_summary,
+    )
+
     regime_diagnostics = regime_performance_summary(
         strategy_returns=overlay_returns,
         regime=regime_table["regime"],
@@ -945,6 +1047,8 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     data_provenance_path = PROCESSED_DATA_DIR / "data_provenance_table.csv"
     active_risk_path = PROCESSED_DATA_DIR / "active_risk_summary.csv"
     active_risk_by_regime_path = PROCESSED_DATA_DIR / "active_risk_by_regime_summary.csv"
+    drawdown_depth_path = PROCESSED_DATA_DIR / "drawdown_depth_summary.csv"
+    recovery_window_path = PROCESSED_DATA_DIR / "recovery_window_summary.csv"
     regime_diagnostics_path = PROCESSED_DATA_DIR / "regime_performance_summary.csv"
     stress_window_path = PROCESSED_DATA_DIR / "stress_window_summary.csv"
     help_hurt_path = PROCESSED_DATA_DIR / "strategy_help_hurt_summary.csv"
@@ -957,6 +1061,8 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     data_provenance.to_csv(data_provenance_path, index=False)
     active_risk_summary.to_csv(active_risk_path)
     active_regime_summary.to_csv(active_risk_by_regime_path, index=False)
+    drawdown_depth_summary.to_csv(drawdown_depth_path, index=False)
+    recovery_window_summary.to_csv(recovery_window_path)
     regime_diagnostics.to_csv(regime_diagnostics_path, index=False)
     stress_summary.to_csv(stress_window_path)
     help_hurt_summary.to_csv(help_hurt_path)
@@ -992,7 +1098,7 @@ Generated at: **{generated_at}**
 
 Data window: **{start_date} to {end_date}**
 
-Target report length: **17 to 19 PDF pages**
+Target report length: **18 to 20 PDF pages**
 
 ## 1. Executive Signal
 
@@ -1139,7 +1245,28 @@ extreme-stress markets.
 
 {active_regime_read}
 
-## 10. Regime and Stress-Window Diagnostics
+## 10. Drawdown and Recovery Diagnostics
+
+Drawdown diagnostics ask whether the overlay helps at different levels of
+benchmark pain. Recovery diagnostics ask the uncomfortable second question:
+does the hedge damage the portfolio when the market starts rebounding?
+
+This matters because a protective overlay can be useful during the fall and
+still become expensive during the recovery.
+
+### Drawdown-Depth Summary
+
+{_drawdown_depth_to_markdown(drawdown_depth_summary)}
+
+### Recovery-Window Summary
+
+{_recovery_window_to_markdown(recovery_window_summary)}
+
+### Drawdown-Recovery Interpretation
+
+{drawdown_recovery_read}
+
+## 11. Regime and Stress-Window Diagnostics
 
 Full-sample metrics can hide the real question. A strategy that looks strong in
 normal conditions may fail when the benchmark is under pressure.
@@ -1160,7 +1287,7 @@ and active-risk control matter most.
 
 {stress_read}
 
-## 11. Strategy Help-Hurt Diagnostics
+## 12. Strategy Help-Hurt Diagnostics
 
 The help-hurt diagnostic explains the trade-off behind each overlay. A strategy
 can protect the downside and still hurt the portfolio if it gives away too much
@@ -1176,7 +1303,7 @@ periods where it creates drag versus passive Brazilian equity.
 
 {help_hurt_read}
 
-## 12. Implementation Drag Diagnostics
+## 13. Implementation Drag Diagnostics
 
 The implementation-drag diagnostic separates the gross overlay signal from the
 net result after transaction costs. This matters because an overlay can look
@@ -1192,11 +1319,11 @@ layer showing whether the overlay signal survives implementation.
 
 {implementation_read}
 
-## 13. Overlay Decision Matrix
+## 14. Overlay Decision Matrix
 
 {_strategy_decision_matrix()}
 
-## 14. Strategy Trade-Off
+## 15. Strategy Trade-Off
 
 **Best annualized return:** `{best_return}`
 
@@ -1218,13 +1345,13 @@ but their cost and upside cap must be justified by the current risk state.
 Stress-aware switching adds discipline, but only if the regime signal is stable
 enough to avoid unnecessary turnover.
 
-## 15. Results SWOT
+## 16. Results SWOT
 
 How to cope with the signal before turning it into a portfolio action.
 
 {_results_swot()}
 
-## 16. ShockBridge Transmission Read
+## 17. ShockBridge Transmission Read
 
 Brazilian equity does not trade in isolation. The book can be hit through local
 rates, fiscal repricing, FX pressure, global volatility, commodity shocks, and
@@ -1238,7 +1365,7 @@ The key insight is simple: volatility is not only a number. It is a carrier of
 stress. When volatility rises with drawdown, the book is not just moving. It is
 absorbing transmission.
 
-## 17. What To Watch Next
+## 18. What To Watch Next
 
 {watch_next}
 
@@ -1246,7 +1373,7 @@ The next model version should not simply add complexity. It should improve the
 decision. The immediate test is whether transaction costs, tracking error, and
 stress subperiod performance confirm or weaken the current overlay ranking.
 
-## 18. What Would Break This View
+## 19. What Would Break This View
 
 This baseline view should be challenged if one of the following happens:
 
@@ -1259,7 +1386,7 @@ This baseline view should be challenged if one of the following happens:
 7. The information ratio is positive in the full sample but weak during stress windows.
 8. Tracking error rises without clear drawdown reduction or active return compensation.
 
-## 19. Model Limits and Governance
+## 20. Model Limits and Governance
 
 This report is intentionally clear about what it does not prove.
 
@@ -1272,7 +1399,7 @@ This report is intentionally clear about what it does not prove.
 - Active risk diagnostics are useful but still require stress-window validation.
 - This is research infrastructure, not investment advice.
 
-## 20. Generated Evidence Files
+## 21. Generated Evidence Files
 
 - `{performance_summary_path}`
 - `{regime_table_path}`
@@ -1281,21 +1408,23 @@ This report is intentionally clear about what it does not prove.
 - `{data_provenance_path}`
 - `{active_risk_path}`
 - `{active_risk_by_regime_path}`
+- `{drawdown_depth_path}`
+- `{recovery_window_path}`
 - `{regime_diagnostics_path}`
 - `{stress_window_path}`
 - `{help_hurt_path}`
 - `{implementation_drag_path}`
 - `{output_path}`
 
-## 21. Next Upgrade
+## 22. Next Upgrade
 
 The next upgrade should turn this from a stress-window decision memo into a
 more realistic implementation framework:
 
 1. test alternative transaction-cost levels
-2. extend active risk into drawdown-depth buckets and recovery windows
-3. decompose option overlays into premium income, payoff effect, and moneyness attribution
-4. integrate real B3 option-chain data when available
+2. decompose option overlays into premium income, payoff effect, and moneyness attribution
+3. integrate real B3 option-chain data when available
+4. add drawdown duration and recovery-speed diagnostics
 5. prepare the path for GARCH, MTV-GARCH, and Brazil Stress Transmission Index integration
 
 ## Research Use Only
