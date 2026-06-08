@@ -1079,3 +1079,186 @@ def option_overlay_attribution_interpretation(summary: pd.DataFrame) -> str:
         "This is still synthetic attribution, not real B3 option-chain attribution, "
         "but it makes the overlay engine explain why the strategy works or fails."
     )
+
+
+def option_attribution_by_regime(
+    attribution: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Summarize model-implied option attribution by regime and strategy.
+
+    This shows whether premium income, payoff effect, protection cost,
+    implementation drag, and net overlay effect behave differently across
+    calm, fragile, stress, and extreme-stress regimes.
+    """
+    if attribution.empty:
+        return pd.DataFrame()
+
+    rows = []
+
+    for (regime_name, strategy), data in attribution.groupby(["regime", "strategy"]):
+        rows.append(
+            {
+                "regime": regime_name,
+                "strategy": strategy,
+                "avg_underlying_return": data["underlying_return"].mean(),
+                "avg_call_premium_income": data["call_premium_income"].mean(),
+                "avg_put_protection_cost": data["put_protection_cost"].mean(),
+                "avg_option_payoff_effect": data["option_payoff_effect"].mean(),
+                "avg_implementation_drag": data["implementation_drag"].mean(),
+                "avg_gross_overlay_effect": data["gross_overlay_effect"].mean(),
+                "avg_net_overlay_effect": data["net_overlay_effect"].mean(),
+                "avg_net_strategy_return": data["net_strategy_return"].mean(),
+                "positive_net_overlay_rate": (data["net_overlay_effect"] > 0).mean(),
+                "observations": len(data),
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
+def _option_attr_drawdown_bucket_at_date(
+    drawdown_state: pd.DataFrame,
+    date: pd.Timestamp,
+) -> str:
+    """
+    Get the most recent benchmark drawdown bucket available at a date.
+    """
+    if drawdown_state.empty:
+        return "unknown"
+
+    state = drawdown_state.dropna(subset=["drawdown_bucket"]).sort_index()
+    available = state.loc[state.index <= date]
+
+    if available.empty:
+        return "unknown"
+
+    return str(available["drawdown_bucket"].iloc[-1])
+
+
+def option_attribution_by_drawdown_bucket(
+    attribution: pd.DataFrame,
+    benchmark_returns: pd.Series,
+) -> pd.DataFrame:
+    """
+    Summarize model-implied option attribution by benchmark drawdown bucket.
+
+    This shows whether option components behave differently near peaks, during
+    shallow drawdowns, moderate drawdowns, and deep drawdowns.
+    """
+    if attribution.empty:
+        return pd.DataFrame()
+
+    drawdown_state = benchmark_drawdown_state(benchmark_returns)
+
+    enriched = attribution.copy()
+    enriched["end_date"] = pd.to_datetime(enriched["end_date"])
+
+    enriched["drawdown_bucket"] = enriched["end_date"].apply(
+        lambda date: _option_attr_drawdown_bucket_at_date(drawdown_state, date)
+    )
+
+    rows = []
+
+    for (bucket, strategy), data in enriched.groupby(["drawdown_bucket", "strategy"]):
+        rows.append(
+            {
+                "drawdown_bucket": bucket,
+                "strategy": strategy,
+                "avg_underlying_return": data["underlying_return"].mean(),
+                "avg_call_premium_income": data["call_premium_income"].mean(),
+                "avg_put_protection_cost": data["put_protection_cost"].mean(),
+                "avg_option_payoff_effect": data["option_payoff_effect"].mean(),
+                "avg_implementation_drag": data["implementation_drag"].mean(),
+                "avg_gross_overlay_effect": data["gross_overlay_effect"].mean(),
+                "avg_net_overlay_effect": data["net_overlay_effect"].mean(),
+                "avg_net_strategy_return": data["net_strategy_return"].mean(),
+                "positive_net_overlay_rate": (data["net_overlay_effect"] > 0).mean(),
+                "observations": len(data),
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
+def option_attribution_context_interpretation(
+    regime_summary: pd.DataFrame,
+    drawdown_summary: pd.DataFrame,
+) -> str:
+    """
+    Produce a compact interpretation of option attribution by regime and drawdown bucket.
+    """
+    if regime_summary.empty and drawdown_summary.empty:
+        return (
+            "No option-attribution context diagnostics were available. The model "
+            "needs valid option attribution, regime labels, and benchmark drawdown "
+            "states before this layer can be interpreted."
+        )
+
+    stress_best = "NA"
+    calm_premium = "NA"
+    deep_payoff = "NA"
+    near_peak_drag = "NA"
+
+    if not regime_summary.empty:
+        stress_rows = regime_summary[
+            regime_summary["regime"].isin(["stress", "extreme_stress"])
+        ].dropna(subset=["avg_net_overlay_effect"])
+
+        if not stress_rows.empty:
+            stress_best = str(
+                stress_rows.loc[
+                    stress_rows["avg_net_overlay_effect"].idxmax(),
+                    "strategy",
+                ]
+            )
+
+        calm_rows = regime_summary[
+            regime_summary["regime"] == "calm"
+        ].dropna(subset=["avg_call_premium_income"])
+
+        if not calm_rows.empty:
+            calm_premium = str(
+                calm_rows.loc[
+                    calm_rows["avg_call_premium_income"].idxmax(),
+                    "strategy",
+                ]
+            )
+
+    if not drawdown_summary.empty:
+        deep_rows = drawdown_summary[
+            drawdown_summary["drawdown_bucket"] == "deep_drawdown"
+        ].dropna(subset=["avg_option_payoff_effect"])
+
+        if not deep_rows.empty:
+            deep_payoff = str(
+                deep_rows.loc[
+                    deep_rows["avg_option_payoff_effect"].idxmax(),
+                    "strategy",
+                ]
+            )
+
+        near_peak_rows = drawdown_summary[
+            drawdown_summary["drawdown_bucket"] == "near_peak"
+        ].dropna(subset=["avg_net_overlay_effect"])
+
+        if not near_peak_rows.empty:
+            near_peak_drag = str(
+                near_peak_rows.loc[
+                    near_peak_rows["avg_net_overlay_effect"].idxmin(),
+                    "strategy",
+                ]
+            )
+
+    return (
+        f"Option-context read: `{stress_best}` shows the strongest net overlay "
+        "effect during stress regimes. "
+        f"`{calm_premium}` generates the strongest call-premium income in calm "
+        "regimes. "
+        f"`{deep_payoff}` shows the strongest payoff contribution during deep "
+        "drawdown buckets. "
+        f"`{near_peak_drag}` shows the weakest net overlay effect near benchmark "
+        "peaks. This separates income, protection, payoff, and drag across the "
+        "market states where portfolio committees actually make allocation decisions."
+    )
+
