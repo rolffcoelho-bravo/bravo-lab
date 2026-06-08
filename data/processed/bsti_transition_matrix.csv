@@ -1,0 +1,10 @@
+from_state,to_state,transitions,probability,transition_label
+normal,normal,1518,0.771733604473818,normal -> normal
+normal,stress,62,0.0315200813421454,normal -> stress
+normal,warning,387,0.1967463141840366,normal -> warning
+stress,normal,27,0.09574468085106383,stress -> normal
+stress,stress,117,0.4148936170212766,stress -> stress
+stress,warning,138,0.48936170212765956,stress -> warning
+warning,normal,422,0.42669362992922144,warning -> normal
+warning,stress,103,0.10414560161779575,warning -> stress
+warning,warning,464,0.4691607684529828,warning -> warning

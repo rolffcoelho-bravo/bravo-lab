@@ -28,6 +28,14 @@ from bravo.bsti_policy import (
     bsti_policy_selection_summary,
     build_bsti_policy_overlay_returns,
 )
+from bravo.bsti_transitions import (
+    bsti_transition_interpretation,
+    build_bsti_escalation_summary,
+    build_bsti_pressure_channel_transition_summary,
+    build_bsti_state_duration_summary,
+    build_bsti_transition_matrix,
+    prepare_bsti_state_table,
+)
 from bravo.bsti_validation import (
     build_bsti_forward_outcomes,
     bsti_overlay_threshold_validation,
@@ -970,6 +978,135 @@ def _bsti_overlay_validation_to_markdown(summary: pd.DataFrame) -> str:
 
 
 
+
+def _bsti_transition_matrix_to_markdown(summary: pd.DataFrame) -> str:
+    headers = [
+        "From State",
+        "To State",
+        "Transitions",
+        "Probability",
+    ]
+
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+
+    for _, row in summary.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(row["from_state"]),
+                    str(row["to_state"]),
+                    str(int(row["transitions"])),
+                    _format_percentage(row["probability"]),
+                ]
+            )
+            + " |"
+        )
+
+    return "\n".join(lines)
+
+
+def _bsti_state_duration_to_markdown(summary: pd.DataFrame) -> str:
+    headers = [
+        "State",
+        "Episodes",
+        "Avg Duration",
+        "Median Duration",
+        "Max Duration",
+        "Avg BSTI",
+        "Max BSTI",
+    ]
+
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+
+    for _, row in summary.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(row["state"]),
+                    str(int(row["episodes"])),
+                    _format_number(row["avg_duration_observations"]),
+                    _format_number(row["median_duration_observations"]),
+                    _format_number(row["max_duration_observations"]),
+                    _format_number(row["avg_bsti_0_100"]),
+                    _format_number(row["max_bsti_0_100"]),
+                ]
+            )
+            + " |"
+        )
+
+    return "\n".join(lines)
+
+
+def _bsti_escalation_to_markdown(summary: pd.DataFrame) -> str:
+    headers = [
+        "Warning Events",
+        "Lookahead Obs.",
+        "Escalation Rate",
+        "Stay Warning/Stress Rate",
+    ]
+
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+
+    for _, row in summary.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(int(row["warning_events"])),
+                    str(int(row["lookahead_observations"])),
+                    _format_percentage(row["escalation_rate"]),
+                    _format_percentage(row["stay_warning_or_stress_rate"]),
+                ]
+            )
+            + " |"
+        )
+
+    return "\n".join(lines)
+
+
+def _bsti_channel_transitions_to_markdown(summary: pd.DataFrame) -> str:
+    headers = [
+        "From Channel",
+        "To Channel",
+        "Transitions",
+        "Probability",
+    ]
+
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+
+    display = summary.head(12)
+
+    for _, row in display.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(row["from_channel"]),
+                    str(row["to_channel"]),
+                    str(int(row["transitions"])),
+                    _format_percentage(row["probability"]),
+                ]
+            )
+            + " |"
+        )
+
+    return "\n".join(lines)
+
+
 def _bsti_policy_selection_to_markdown(summary: pd.DataFrame) -> str:
     headers = [
         "Selected Strategy",
@@ -1440,8 +1577,9 @@ def _report_structure() -> str:
 | 12 | BSTI Threshold Validation | Tests whether BSTI thresholds connect to future drawdowns and overlay behavior |
 | 13 | BSTI Threshold Calibration | Tests alternative thresholds and component-weighting schemes |
 | 14 | BSTI Overlay Policy Selection | Converts calibrated stress signals into portfolio actions |
-| 15 | Drawdown and Recovery Diagnostics | Tests behavior in drawdown depth and rebound windows |
-| 16 | Regime and Stress Diagnostics | Tests whether the overlay helps when market pressure rises |
+| 15 | BSTI Signal Persistence | Tests warning-state durability, escalation, and pressure-channel transitions |
+| 16 | Drawdown and Recovery Diagnostics | Tests behavior in drawdown depth and rebound windows |
+| 17 | Regime and Stress Diagnostics | Tests whether the overlay helps when market pressure rises |
 | 12 | Strategy Help-Hurt Diagnostics | Explains when each overlay adds value or creates drag |
 | 13 | Implementation Drag Diagnostics | Separates gross signal, cost drag, and net overlay effect |
 | 14 | Option Overlay Attribution | Separates premium, protection cost, payoff, drag, and net effect |
@@ -1597,6 +1735,35 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
         selection_summary=bsti_policy_selection,
     )
 
+    bsti_state_table = prepare_bsti_state_table(
+        bsti_table=bsti_table,
+        warning_threshold=15.0,
+        stress_threshold=33.0,
+    )
+
+    bsti_transition_matrix = build_bsti_transition_matrix(
+        bsti_state_table
+    )
+
+    bsti_state_duration_summary = build_bsti_state_duration_summary(
+        bsti_state_table
+    )
+
+    bsti_escalation_summary = build_bsti_escalation_summary(
+        bsti_state_table,
+        lookahead_observations=3,
+    )
+
+    bsti_pressure_channel_transitions = build_bsti_pressure_channel_transition_summary(
+        bsti_state_table
+    )
+
+    bsti_transition_read = bsti_transition_interpretation(
+        transition_matrix=bsti_transition_matrix,
+        duration_summary=bsti_state_duration_summary,
+        escalation_summary=bsti_escalation_summary,
+    )
+
     regime_diagnostics = regime_performance_summary(
         strategy_returns=overlay_returns,
         regime=regime_table["regime"],
@@ -1671,6 +1838,11 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     bsti_policy_decisions_path = PROCESSED_DATA_DIR / "bsti_policy_decisions.csv"
     bsti_policy_selection_path = PROCESSED_DATA_DIR / "bsti_policy_selection_summary.csv"
     bsti_policy_comparison_path = PROCESSED_DATA_DIR / "bsti_policy_comparison_summary.csv"
+    bsti_state_table_path = PROCESSED_DATA_DIR / "bsti_state_table.csv"
+    bsti_transition_matrix_path = PROCESSED_DATA_DIR / "bsti_transition_matrix.csv"
+    bsti_state_duration_path = PROCESSED_DATA_DIR / "bsti_state_duration_summary.csv"
+    bsti_escalation_path = PROCESSED_DATA_DIR / "bsti_escalation_summary.csv"
+    bsti_channel_transitions_path = PROCESSED_DATA_DIR / "bsti_pressure_channel_transitions.csv"
     overlay_returns_path = PROCESSED_DATA_DIR / "overlay_return_table.csv"
     overlay_summary_path = PROCESSED_DATA_DIR / "overlay_performance_summary.csv"
     data_provenance_path = PROCESSED_DATA_DIR / "data_provenance_table.csv"
@@ -1710,6 +1882,11 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     bsti_policy_decisions.to_csv(bsti_policy_decisions_path, index=True)
     bsti_policy_selection.to_csv(bsti_policy_selection_path, index=False)
     bsti_policy_comparison.to_csv(bsti_policy_comparison_path, index=True)
+    bsti_state_table.to_csv(bsti_state_table_path, index=True)
+    bsti_transition_matrix.to_csv(bsti_transition_matrix_path, index=False)
+    bsti_state_duration_summary.to_csv(bsti_state_duration_path, index=False)
+    bsti_escalation_summary.to_csv(bsti_escalation_path, index=False)
+    bsti_pressure_channel_transitions.to_csv(bsti_channel_transitions_path, index=False)
     regime_diagnostics.to_csv(regime_diagnostics_path, index=False)
     stress_summary.to_csv(stress_window_path)
     help_hurt_summary.to_csv(help_hurt_path)
@@ -1749,7 +1926,7 @@ Generated at: **{generated_at}**
 
 Data window: **{start_date} to {end_date}**
 
-Target report length: **25 to 27 PDF pages**
+Target report length: **26 to 28 PDF pages**
 
 ## 1. Executive Signal
 
@@ -2005,7 +2182,38 @@ covered calls, collars, and the existing local-regime stress-aware overlay.
 
 {bsti_policy_read}
 
-## 15. Drawdown and Recovery Diagnostics
+## 15. BSTI Signal Persistence and State Transitions
+
+A stress signal is not useful only because it moves. It is useful when it
+persists long enough to support a decision process.
+
+This section tests whether the Brazil Stress Transmission Index behaves like a
+governance signal rather than a random dashboard number. It classifies each
+BSTI observation into normal, warning, or stress states, then studies transition
+probabilities, state duration, warning-to-stress escalation, and dominant
+pressure-channel rotation.
+
+### BSTI State Transition Matrix
+
+{_bsti_transition_matrix_to_markdown(bsti_transition_matrix)}
+
+### BSTI State Duration Summary
+
+{_bsti_state_duration_to_markdown(bsti_state_duration_summary)}
+
+### Warning-to-Stress Escalation
+
+{_bsti_escalation_to_markdown(bsti_escalation_summary)}
+
+### Dominant Pressure-Channel Transitions
+
+{_bsti_channel_transitions_to_markdown(bsti_pressure_channel_transitions)}
+
+### Transition Interpretation
+
+{bsti_transition_read}
+
+## 16. Drawdown and Recovery Diagnostics
 
 Drawdown diagnostics ask whether the overlay helps at different levels of
 benchmark pain. Recovery diagnostics ask the uncomfortable second question:
@@ -2026,7 +2234,7 @@ still become expensive during the recovery.
 
 {drawdown_recovery_read}
 
-## 16. Regime and Stress-Window Diagnostics
+## 17. Regime and Stress-Window Diagnostics
 
 Full-sample metrics can hide the real question. A strategy that looks strong in
 normal conditions may fail when the benchmark is under pressure.
@@ -2047,7 +2255,7 @@ and active-risk control matter most.
 
 {stress_read}
 
-## 17. Strategy Help-Hurt Diagnostics
+## 18. Strategy Help-Hurt Diagnostics
 
 The help-hurt diagnostic explains the trade-off behind each overlay. A strategy
 can protect the downside and still hurt the portfolio if it gives away too much
@@ -2063,7 +2271,7 @@ periods where it creates drag versus passive Brazilian equity.
 
 {help_hurt_read}
 
-## 18. Implementation Drag Diagnostics
+## 19. Implementation Drag Diagnostics
 
 The implementation-drag diagnostic separates the gross overlay signal from the
 net result after transaction costs. This matters because an overlay can look
@@ -2079,7 +2287,7 @@ layer showing whether the overlay signal survives implementation.
 
 {implementation_read}
 
-## 19. Option Overlay Attribution
+## 20. Option Overlay Attribution
 
 This attribution layer explains why the synthetic option overlay worked or
 failed. It separates the model-implied return into premium income, protection
@@ -2096,7 +2304,7 @@ the derivatives logic inspectable.
 
 {option_attribution_read}
 
-## 20. Option Attribution by Regime and Drawdown Bucket
+## 21. Option Attribution by Regime and Drawdown Bucket
 
 The previous attribution table explains the average option overlay effect. This
 section asks where that effect appears. Premium income, protection cost, payoff
@@ -2119,11 +2327,11 @@ drag near market peaks.
 
 {option_context_read}
 
-## 21. Overlay Decision Matrix
+## 22. Overlay Decision Matrix
 
 {_strategy_decision_matrix()}
 
-## 22. Strategy Trade-Off
+## 23. Strategy Trade-Off
 
 **Best annualized return:** `{best_return}`
 
@@ -2145,13 +2353,13 @@ but their cost and upside cap must be justified by the current risk state.
 Stress-aware switching adds discipline, but only if the regime signal is stable
 enough to avoid unnecessary turnover.
 
-## 23. Results SWOT
+## 24. Results SWOT
 
 How to cope with the signal before turning it into a portfolio action.
 
 {_results_swot()}
 
-## 24. ShockBridge Transmission Read
+## 25. ShockBridge Transmission Read
 
 Brazilian equity does not trade in isolation. The book can be hit through local
 rates, fiscal repricing, FX pressure, global volatility, commodity shocks, and
@@ -2165,7 +2373,7 @@ The key insight is simple: volatility is not only a number. It is a carrier of
 stress. When volatility rises with drawdown, the book is not just moving. It is
 absorbing transmission.
 
-## 25. What To Watch Next
+## 26. What To Watch Next
 
 {watch_next}
 
@@ -2173,7 +2381,7 @@ The next model version should not simply add complexity. It should improve the
 decision. The immediate test is whether transaction costs, tracking error, and
 stress subperiod performance confirm or weaken the current overlay ranking.
 
-## 26. What Would Break This View
+## 27. What Would Break This View
 
 This baseline view should be challenged if one of the following happens:
 
@@ -2186,7 +2394,7 @@ This baseline view should be challenged if one of the following happens:
 7. The information ratio is positive in the full sample but weak during stress windows.
 8. Tracking error rises without clear drawdown reduction or active return compensation.
 
-## 27. Model Limits and Governance
+## 28. Model Limits and Governance
 
 This report is intentionally clear about what it does not prove.
 
@@ -2199,7 +2407,7 @@ This report is intentionally clear about what it does not prove.
 - Active risk diagnostics are useful but still require stress-window validation.
 - This is research infrastructure, not investment advice.
 
-## 28. Generated Evidence Files
+## 29. Generated Evidence Files
 
 - `{performance_summary_path}`
 - `{regime_table_path}`
@@ -2217,6 +2425,11 @@ This report is intentionally clear about what it does not prove.
 - `{bsti_policy_decisions_path}`
 - `{bsti_policy_selection_path}`
 - `{bsti_policy_comparison_path}`
+- `{bsti_state_table_path}`
+- `{bsti_transition_matrix_path}`
+- `{bsti_state_duration_path}`
+- `{bsti_escalation_path}`
+- `{bsti_channel_transitions_path}`
 - `{overlay_returns_path}`
 - `{overlay_summary_path}`
 - `{data_provenance_path}`
@@ -2234,15 +2447,15 @@ This report is intentionally clear about what it does not prove.
 - `{option_attribution_drawdown_path}`
 - `{output_path}`
 
-## 29. Next Upgrade
+## 30. Next Upgrade
 
 The next upgrade should turn this from a stress-window decision memo into a
 more realistic implementation framework:
 
 1. test alternative transaction-cost levels
 2. validate synthetic attribution against real B3 option-chain data when available
-3. add drawdown duration and recovery-speed diagnostics
-4. add BSTI signal persistence and warning-state transition diagnostics
+3. connect BSTI transition states to overlay-policy confirmation rules
+4. add stress-signal decay and false-alarm diagnostics
 5. prepare the path for GARCH, MTV-GARCH, and portfolio-governance scenario testing
 
 ## Research Use Only
