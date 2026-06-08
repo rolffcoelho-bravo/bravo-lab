@@ -181,13 +181,12 @@ def _save(fig, path: Path) -> Path:
     # so layout is only tightened for standard chart figures.
     if "executive_risk_dashboard" not in path.name:
         with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        fig.tight_layout(rect=[0, 0.035, 1, 1])
+            warnings.simplefilter("ignore", UserWarning)
+            fig.tight_layout(rect=[0, 0.035, 1, 1])
 
     fig.savefig(path, dpi=260, bbox_inches="tight")
     plt.close(fig)
     return path
-
 
 def _cumulative_returns(returns: pd.DataFrame) -> pd.DataFrame:
     return (1.0 + returns.fillna(0.0)).cumprod() - 1.0

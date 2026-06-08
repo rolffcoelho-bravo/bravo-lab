@@ -1,2 +1,2 @@
 date,multi_asset_stress_score,multi_asset_stress_regime,top_pressure_1,top_pressure_1_value,top_pressure_2,top_pressure_2_value,top_pressure_3,top_pressure_3_value,brazil_drawdown,brazil_realized_vol_21d,vix_level
-2026-06-09,0.37026392374139444,calm,brazil_drawdown_pressure,1.8766298304761908,global_equity_pressure,0.19100467525071874,fx_pressure,0.11691672291661757,-0.1519778802292977,0.16145375842457732,18.920000076293945
+2026-06-08,0.894404547238099,fragile,fx_pressure,2.8131947873896697,brazil_drawdown_pressure,1.938235616782807,external_brazil_pressure,0.614996879256117,-0.15069688004837523,0.16443964293536878,18.920000076293945

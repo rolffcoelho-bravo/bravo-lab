@@ -1,9 +1,9 @@
 layer,item,ticker_or_input,source,evidence_type,transformation,start_date,end_date,price_observations,return_observations,status
-market_data,brazil_equity,BOVA11.SA,Yahoo Finance through yfinance,real_public_market_price_series,adjusted close prices and daily returns,2014-01-02,2026-06-09,3240,3239,real market proxy
-market_data,brazil_external,EWZ,Yahoo Finance through yfinance,real_public_market_price_series,adjusted close prices and daily returns,2014-01-02,2026-06-09,3240,3239,real market proxy
-market_data,global_equity,SPY,Yahoo Finance through yfinance,real_public_market_price_series,adjusted close prices and daily returns,2014-01-02,2026-06-09,3240,3239,real market proxy
-market_data,fx_usdbrl,BRL=X,Yahoo Finance through yfinance,real_public_market_price_series,adjusted close prices and daily returns,2014-01-02,2026-06-09,3240,3239,real market proxy
-market_data,vix,^VIX,Yahoo Finance through yfinance,real_public_market_price_series,adjusted close prices and daily returns,2014-01-02,2026-06-09,3240,3239,real market proxy
+market_data,brazil_equity,BOVA11.SA,Yahoo Finance through yfinance,real_public_market_price_series,adjusted close prices and daily returns,2014-01-02,2026-06-08,3239,3238,real market proxy
+market_data,brazil_external,EWZ,Yahoo Finance through yfinance,real_public_market_price_series,adjusted close prices and daily returns,2014-01-02,2026-06-08,3239,3238,real market proxy
+market_data,global_equity,SPY,Yahoo Finance through yfinance,real_public_market_price_series,adjusted close prices and daily returns,2014-01-02,2026-06-08,3239,3238,real market proxy
+market_data,fx_usdbrl,BRL=X,Yahoo Finance through yfinance,real_public_market_price_series,adjusted close prices and daily returns,2014-01-02,2026-06-08,3239,3238,real market proxy
+market_data,vix,^VIX,Yahoo Finance through yfinance,real_public_market_price_series,adjusted close prices and daily returns,2014-01-02,2026-06-08,3239,3238,real market proxy
 derived_metric,realized_volatility,brazil_equity returns,BRAVO Lab calculation,model_derived,rolling standard deviation annualized,derived from available market window,derived from available market window,NA,NA,derived from real market data
 derived_metric,drawdown,brazil_equity returns,BRAVO Lab calculation,model_derived,cumulative return versus running maximum,derived from available market window,derived from available market window,NA,NA,derived from real market data
 regime_signal,baseline_regime_classifier,volatility percentile and drawdown,BRAVO Lab rule-based classifier,model_generated_signal,"calm, fragile, stress, extreme_stress classification",derived from available market window,derived from available market window,NA,NA,"decision signal, not observed market data"
