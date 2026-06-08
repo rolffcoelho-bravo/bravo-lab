@@ -42,6 +42,7 @@ from bravo.bsti_validation import (
     bsti_threshold_validation,
     bsti_validation_interpretation,
 )
+from bravo.front_office_memo import build_front_office_memo
 from bravo.premium_figures import build_report_figure_set, figure_markdown_gallery
 from bravo.config import BASELINE_REPORT_PATH, PROCESSED_DATA_DIR, REPORTS_DIR, TICKERS
 from bravo.data import load_market_data
@@ -1927,7 +1928,7 @@ Generated at: **{generated_at}**
 
 Data window: **{start_date} to {end_date}**
 
-Target report length: **34 to 38 PDF pages**
+Target report length: **36 to 40 PDF pages**
 
 ## 1. Executive Signal
 
@@ -2466,6 +2467,10 @@ discussion. It is not a trading recommendation, not a solicitation, and not a
 production investment model.
 """
 
+    front_office_memo = build_front_office_memo(
+        processed_dir=PROCESSED_DATA_DIR,
+    )
+
     report_figure_paths = build_report_figure_set(
         processed_dir=PROCESSED_DATA_DIR,
         figures_dir=REPORTS_DIR / "figures",
@@ -2475,7 +2480,11 @@ production investment model.
 
     report = report.replace(
         "## 1. Executive Summary",
-        f"## Premium Visual Evidence Layer\n\n{report_figure_gallery}\n\n## 1. Executive Summary",
+        (
+            f"## Front-Office Executive Memo\n\n{front_office_memo}\n\n"
+            f"## Premium Visual Evidence Layer\n\n{report_figure_gallery}\n\n"
+            f"## 1. Executive Summary"
+        ),
         1,
     )
 

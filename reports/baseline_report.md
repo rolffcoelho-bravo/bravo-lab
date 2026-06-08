@@ -2,11 +2,11 @@
 
 **Subtitle:** Brazilian Equity Risk, Volatility Transmission, and Synthetic Protection Logic
 
-Generated at: **2026-06-08 22:32:01 UTC**
+Generated at: **2026-06-08 22:39:16 UTC**
 
 Data window: **2014-01-02 to 2026-06-08**
 
-Target report length: **34 to 38 PDF pages**
+Target report length: **36 to 40 PDF pages**
 
 ## 1. Executive Signal
 
