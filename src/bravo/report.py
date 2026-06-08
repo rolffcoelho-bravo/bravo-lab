@@ -1846,6 +1846,7 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     bsti_escalation_path = PROCESSED_DATA_DIR / "bsti_escalation_summary.csv"
     bsti_channel_transitions_path = PROCESSED_DATA_DIR / "bsti_pressure_channel_transitions.csv"
     overlay_returns_path = PROCESSED_DATA_DIR / "overlay_return_table.csv"
+    front_office_memo_path = REPORTS_DIR / "front_office_memo.md"
     overlay_summary_path = PROCESSED_DATA_DIR / "overlay_performance_summary.csv"
     data_provenance_path = PROCESSED_DATA_DIR / "data_provenance_table.csv"
     active_risk_path = PROCESSED_DATA_DIR / "active_risk_summary.csv"
@@ -2447,6 +2448,7 @@ This report is intentionally clear about what it does not prove.
 - `{option_attribution_summary_path}`
 - `{option_attribution_regime_path}`
 - `{option_attribution_drawdown_path}`
+- `{front_office_memo_path}`
 - `{output_path}`
 
 ## 30. Next Upgrade
@@ -2502,6 +2504,22 @@ production investment model.
     front_office_block = (
         f"## Front-Office Executive Memo\n\n{front_office_memo}\n\n"
         f"## Premium Visual Evidence Layer\n\n{report_figure_gallery}\n\n"
+    )
+
+    standalone_front_office_memo = (
+        "# BRAVO Lab Front-Office Executive Memo\n\n"
+        "**Purpose:** portfolio-governance decision support for Brazilian risk, "
+        "volatility transmission, and overlay policy selection.\n\n"
+        f"{front_office_memo}\n\n"
+        "## Visual Evidence\n\n"
+        "See `reports/figures/` for the executive dashboard, drawdown map, "
+        "BSTI signal, policy-selection mix, risk-return map, transition matrix, "
+        "and calibration scorecard.\n"
+    )
+
+    front_office_memo_path.write_text(
+        standalone_front_office_memo,
+        encoding="utf-8",
     )
 
     if "## Front-Office Executive Memo" not in report:
