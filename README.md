@@ -33,8 +33,6 @@ The fastest way to review the project is:
 The dashboard above is generated automatically from the reproducible BRAVO Lab pipeline. It summarizes the latest Brazil stress state, dominant pressure channel, portfolio policy action, and active-risk leaders.
 
 
-
-
 BRAVO Lab is a Python research pipeline for transforming Brazilian market volatility, derivatives overlays, contagion signals, and dynamic risk regimes into portfolio-grade analytical reports.
 
 The project asks a practical question: can advanced financial-econometric models improve how Brazilian equity exposure is protected, monetized, and evaluated across calm, fragile, stress, and extreme-stress market regimes?
@@ -133,28 +131,57 @@ Run locally: `PYTHONPATH=src pytest -q`
 
 ## Quickstart
 
-Phase 1 is documentation and repository structure. Full implementation is planned in the next phase.
+BRAVO Lab includes a reproducible report package, processed evidence files, premium figures, offline tests, and CI.
 
-```bash
-pip install -r requirements.txt
-make smoke-test
-make report
+### Windows PowerShell
+
+```powershell
+python -m pip install -r requirements.txt
+$env:PYTHONPATH="src"
+python -m pytest -q
+python scripts/generate_report.py
 ```
 
-At this stage, the Makefile commands are intentionally conservative and do not claim completed strategy results.
+### macOS / Linux
+
+```bash
+python -m pip install -r requirements.txt
+PYTHONPATH=src pytest -q
+PYTHONPATH=src python scripts/generate_report.py
+```
+
+Optional: if GNU Make is installed, `make report` may also be used. On Windows PowerShell, the direct Python script is the safer default.
+
+The generated report outputs are available in `reports/`, with reproducible CSV evidence in `data/processed/`.
+
 
 ## Current implementation status
 
-| Component                            | Status  |
-| ------------------------------------ | ------- |
-| Repository structure                 | Created |
-| Reviewer documentation               | Phase 1 |
-| Data pipeline                        | Planned |
-| Volatility regime engine             | Planned |
-| MTV-GARCH / dynamic covariance layer | Planned |
-| Brazil Stress Transmission Index     | Planned |
-| Options strategy backtests           | Planned |
-| Automated decision-grade report      | Planned |
+| Component | Status |
+| --- | --- |
+| Repository structure | Implemented |
+| Reviewer documentation | Implemented |
+| Data pipeline | Implemented |
+| Baseline market-risk metrics | Implemented |
+| Volatility and drawdown regime engine | Implemented |
+| Synthetic covered call and collar overlays | Implemented |
+| Active-risk diagnostics | Implemented |
+| Brazil Stress Transmission Index | Implemented |
+| BSTI threshold validation | Implemented |
+| BSTI calibration layer | Implemented |
+| BSTI overlay policy selection | Implemented |
+| BSTI persistence and transition diagnostics | Implemented |
+| Premium visual evidence layer | Implemented |
+| Front-office executive memo | Implemented |
+| Standalone report index | Implemented |
+| Offline tests and GitHub Actions CI | Implemented |
+| Windows-friendly report runner | Implemented |
+| Real B3 option-chain validation | Future upgrade |
+| MTV-GARCH / dynamic covariance layer | Future upgrade |
+| CCA / Ridge CCA stress-compression layer | Future upgrade |
+| Wavelet stress decomposition | Future upgrade |
+| ML regime-classification robustness layer | Future upgrade |
+
 
 ## Roadmap
 
