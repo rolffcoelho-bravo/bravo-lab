@@ -2,7 +2,7 @@
 
 **Subtitle:** Brazilian Equity Risk, Volatility Transmission, and Synthetic Protection Logic
 
-Generated at: **2026-06-08 22:45:29 UTC**
+Generated at: **2026-06-08 23:03:08 UTC**
 
 Data window: **2014-01-02 to 2026-06-08**
 
@@ -12,7 +12,7 @@ Target report length: **36 to 40 PDF pages**
 
 ### Decision read
 
-BRAVO Lab currently reads Brazilian risk through a BSTI score of **31.27**, classified as **Fragile**, with **Fx Pressure** as the dominant pressure channel. The current BSTI policy action is **Covered Call**.
+BRAVO Lab currently reads Brazilian risk through a BSTI score of **29.83**, classified as **Fragile**, with **Fx Pressure** as the dominant pressure channel. The current BSTI policy action is **Covered Call**.
 
 The model is prioritizing income capture. The committee should check whether the upside sold is acceptable under the current stress state.
 
@@ -20,7 +20,7 @@ The model is prioritizing income capture. The committee should check whether the
 
 | Item | Current read |
 | --- | --- |
-| Current BSTI score | 31.27 |
+| Current BSTI score | 29.83 |
 | Current BSTI regime | Fragile |
 | Dominant pressure channel | Fx Pressure |
 | Current policy action | Covered Call |
@@ -243,7 +243,7 @@ overlay discussion is taking place in a calm, fragile, or stressed environment.
 | Asset | Ann. Return | Ann. Volatility | Sharpe | Sortino | Max Drawdown | VaR 95% | CVaR 95% | Obs. |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | brazil_equity | 9.92% | 23.14% | 0.525 | 0.686 | -46.93% | -2.21% | -3.28% | 3238 |
-| fx_usdbrl | 6.34% | 16.46% | 0.456 | 0.703 | -26.80% | -1.59% | -2.23% | 3238 |
+| fx_usdbrl | 6.31% | 16.45% | 0.454 | 0.701 | -26.80% | -1.59% | -2.23% | 3238 |
 | brazil_external | 2.57% | 33.91% | 0.246 | 0.323 | -66.54% | -3.30% | -4.84% | 3238 |
 | global_equity | 13.30% | 16.92% | 0.823 | 0.985 | -33.72% | -1.60% | -2.59% | 3238 |
 | vix | 2.24% | 133.46% | 0.624 | 1.276 | -85.66% | -10.53% | -14.20% | 3238 |
@@ -338,11 +338,11 @@ from.
 
 | Date | Composite Stress Score | Stress Regime | Top Pressure 1 | Value 1 | Top Pressure 2 | Value 2 | Top Pressure 3 | Value 3 | Brazil Drawdown | Brazil 21D Vol | VIX Level |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-06-08 | 0.899 | fragile | fx_pressure | 2.813 | brazil_drawdown_pressure | 1.965 | external_brazil_pressure | 0.615 | -15.20% | 16.40% | 18.920 |
+| 2026-06-08 | 0.851 | fragile | fx_pressure | 2.525 | brazil_drawdown_pressure | 1.965 | external_brazil_pressure | 0.615 | -15.20% | 16.40% | 18.920 |
 
 ### Multi-Asset Stress Interpretation
 
-Multi-asset stress read: the latest composite stress score is `0.90`, classified as `fragile`. The strongest current pressure inputs are `fx_pressure`, `brazil_drawdown_pressure`, and `external_brazil_pressure`. This extends the framework beyond local price behavior and starts moving BRAVO Lab toward a broader Brazil stress transmission dashboard.
+Multi-asset stress read: the latest composite stress score is `0.85`, classified as `fragile`. The strongest current pressure inputs are `fx_pressure`, `brazil_drawdown_pressure`, and `external_brazil_pressure`. This extends the framework beyond local price behavior and starts moving BRAVO Lab toward a broader Brazil stress transmission dashboard.
 
 ## 11. Brazil Stress Transmission Index
 
@@ -358,7 +358,7 @@ where pressure is coming from.
 
 | Date | BSTI 0-100 | Raw Score | Regime | Stress Breadth | Active Channels | Dominant Channel | Dominant Value | Top Channel 1 | Value 1 | Top Channel 2 | Value 2 | Top Channel 3 | Value 3 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-06-08 | 31.266 | 0.938 | fragile | 0.333 | 2 | fx_pressure | 2.813 | fx_pressure | 2.813 | brazil_drawdown_pressure | 1.965 | external_brazil_pressure | 0.615 |
+| 2026-06-08 | 29.827 | 0.895 | fragile | 0.333 | 2 | fx_pressure | 2.525 | fx_pressure | 2.525 | brazil_drawdown_pressure | 1.965 | external_brazil_pressure | 0.615 |
 
 ### Historical BSTI Regime Distribution
 
@@ -371,7 +371,7 @@ where pressure is coming from.
 
 ### BSTI Interpretation
 
-BSTI read: the latest Brazil Stress Transmission Index is `31.3` out of 100, classified as `fragile`. Stress breadth is `0.33`, with `2` active pressure channels. The dominant pressure channel is `fx_pressure`. The top three channels are `fx_pressure`, `brazil_drawdown_pressure`, and `external_brazil_pressure`. This turns the multi-asset stress dashboard into a formal Brazil stress-transmission index that can be monitored, reported, and later tested against overlay decisions.
+BSTI read: the latest Brazil Stress Transmission Index is `29.8` out of 100, classified as `fragile`. Stress breadth is `0.33`, with `2` active pressure channels. The dominant pressure channel is `fx_pressure`. The top three channels are `fx_pressure`, `brazil_drawdown_pressure`, and `external_brazil_pressure`. This turns the multi-asset stress dashboard into a formal Brazil stress-transmission index that can be monitored, reported, and later tested against overlay decisions.
 
 ## 12. BSTI Threshold Validation
 
@@ -469,7 +469,7 @@ covered calls, collars, and the existing local-regime stress-aware overlay.
 | Selected Strategy | Obs. | Share | Avg BSTI | Avg Selected Return | Avg Passive Return | Avg Active Return | Positive Active Rate |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | collar | 9 | 5.96% | 51.053 | -3.20% | -8.83% | 5.63% | 100.00% |
-| covered_call | 50 | 33.11% | 22.077 | -0.71% | -1.09% | 0.38% | 90.00% |
+| covered_call | 50 | 33.11% | 22.048 | -0.71% | -1.09% | 0.38% | 90.00% |
 | passive_brazil_equity | 92 | 60.93% | 7.257 | 3.11% | 3.11% | 0.00% | 0.00% |
 
 ### Policy Performance Comparison
@@ -516,7 +516,7 @@ pressure-channel rotation.
 | State | Episodes | Avg Duration | Median Duration | Max Duration | Avg BSTI | Max BSTI |
 | --- | --- | --- | --- | --- | --- | --- |
 | normal | 449 | 4.381 | 2.000 | 46.000 | 8.373 | 14.998 |
-| warning | 525 | 1.884 | 1.000 | 15.000 | 21.478 | 32.983 |
+| warning | 525 | 1.884 | 1.000 | 15.000 | 21.475 | 32.983 |
 | stress | 165 | 1.709 | 1.000 | 24.000 | 41.687 | 99.514 |
 
 ### Warning-to-Stress Escalation
