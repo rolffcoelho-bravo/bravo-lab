@@ -2,7 +2,7 @@
 
 **Subtitle:** Brazilian Equity Risk, Volatility Transmission, and Synthetic Protection Logic
 
-Generated at: **2026-06-08 23:03:08 UTC**
+Generated at: **2026-06-08 23:23:37 UTC**
 
 Data window: **2014-01-02 to 2026-06-08**
 
