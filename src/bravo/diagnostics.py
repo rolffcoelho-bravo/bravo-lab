@@ -1,11 +1,12 @@
 """
-Regime and stress-window diagnostics for BRAVO Lab.
+Regime, stress-window, and strategy help-hurt diagnostics for BRAVO Lab.
 
 This module evaluates whether overlay strategies work when they matter most:
 during fragile, stress, and extreme-stress market regimes.
 
-The purpose is to move beyond full-sample performance and test the decision
-logic under market pressure.
+It also explains when each overlay helps or hurts relative to passive Brazilian
+equity exposure. The purpose is to move beyond full-sample performance and test
+the decision logic under market pressure.
 """
 
 from __future__ import annotations
@@ -211,4 +212,151 @@ def stress_window_interpretation(stress_summary: pd.DataFrame) -> str:
         "strongest average stress-period return. The portfolio question is whether "
         "the protection benefit is large enough to justify the active risk and "
         "implementation complexity."
+    )
+
+
+def strategy_help_hurt_diagnostics(
+    strategy_returns: pd.DataFrame,
+    benchmark_column: str = "passive_brazil_equity",
+) -> pd.DataFrame:
+    """
+    Diagnose when each overlay helps or hurts versus passive exposure.
+
+    This table separates active performance into:
+    - periods when passive exposure is positive
+    - periods when passive exposure is negative
+    - periods when the overlay beats passive
+    - periods when the overlay lags passive
+
+    The goal is to explain the trade-off, not only rank strategies.
+    """
+    if benchmark_column not in strategy_returns.columns:
+        raise KeyError(f"Benchmark column not found: {benchmark_column}")
+
+    benchmark = strategy_returns[benchmark_column].dropna()
+    rows = []
+
+    for strategy in strategy_returns.columns:
+        if strategy == benchmark_column:
+            continue
+
+        aligned = pd.concat(
+            {
+                "strategy": strategy_returns[strategy],
+                "benchmark": benchmark,
+            },
+            axis=1,
+        ).dropna()
+
+        if aligned.empty:
+            rows.append(
+                {
+                    "strategy": strategy,
+                    "avg_active_return": np.nan,
+                    "avg_active_when_passive_positive": np.nan,
+                    "avg_active_when_passive_negative": np.nan,
+                    "hit_rate_vs_passive": np.nan,
+                    "missed_upside_rate": np.nan,
+                    "downside_protection_rate": np.nan,
+                    "best_active_period": np.nan,
+                    "worst_active_period": np.nan,
+                    "primary_help_zone": "insufficient_data",
+                    "primary_hurt_zone": "insufficient_data",
+                    "observations": 0,
+                }
+            )
+            continue
+
+        active = aligned["strategy"] - aligned["benchmark"]
+        passive_positive = aligned[aligned["benchmark"] > 0]
+        passive_negative = aligned[aligned["benchmark"] < 0]
+
+        avg_active_positive = np.nan
+        missed_upside_rate = np.nan
+
+        if not passive_positive.empty:
+            active_positive = passive_positive["strategy"] - passive_positive["benchmark"]
+            avg_active_positive = active_positive.mean()
+            missed_upside_rate = (
+                passive_positive["strategy"] < passive_positive["benchmark"]
+            ).mean()
+
+        avg_active_negative = np.nan
+        downside_protection_rate = np.nan
+
+        if not passive_negative.empty:
+            active_negative = passive_negative["strategy"] - passive_negative["benchmark"]
+            avg_active_negative = active_negative.mean()
+            downside_protection_rate = (
+                passive_negative["strategy"] > passive_negative["benchmark"]
+            ).mean()
+
+        hit_rate = (aligned["strategy"] > aligned["benchmark"]).mean()
+
+        primary_help_zone = "mixed"
+        if not np.isnan(avg_active_negative) and avg_active_negative > 0:
+            primary_help_zone = "downside_protection"
+        elif not np.isnan(avg_active_positive) and avg_active_positive > 0:
+            primary_help_zone = "upside_participation"
+        elif active.mean() > 0:
+            primary_help_zone = "broad_active_return"
+
+        primary_hurt_zone = "mixed"
+        if not np.isnan(avg_active_positive) and avg_active_positive < 0:
+            primary_hurt_zone = "missed_upside"
+        elif not np.isnan(avg_active_negative) and avg_active_negative < 0:
+            primary_hurt_zone = "failed_protection"
+        elif active.mean() < 0:
+            primary_hurt_zone = "negative_active_return"
+
+        rows.append(
+            {
+                "strategy": strategy,
+                "avg_active_return": active.mean(),
+                "avg_active_when_passive_positive": avg_active_positive,
+                "avg_active_when_passive_negative": avg_active_negative,
+                "hit_rate_vs_passive": hit_rate,
+                "missed_upside_rate": missed_upside_rate,
+                "downside_protection_rate": downside_protection_rate,
+                "best_active_period": active.max(),
+                "worst_active_period": active.min(),
+                "primary_help_zone": primary_help_zone,
+                "primary_hurt_zone": primary_hurt_zone,
+                "observations": len(aligned),
+            }
+        )
+
+    return pd.DataFrame(rows).set_index("strategy")
+
+
+def strategy_help_hurt_interpretation(help_hurt: pd.DataFrame) -> str:
+    """
+    Produce a compact interpretation of the help-hurt diagnostics.
+    """
+    if help_hurt.empty:
+        return (
+            "No help-hurt diagnostics were available. The strategy table needs "
+            "valid overlay and passive return series before interpretation."
+        )
+
+    valid_downside = help_hurt["downside_protection_rate"].dropna()
+    valid_upside_drag = help_hurt["missed_upside_rate"].dropna()
+
+    if valid_downside.empty:
+        best_downside = "NA"
+    else:
+        best_downside = str(valid_downside.idxmax())
+
+    if valid_upside_drag.empty:
+        highest_upside_drag = "NA"
+    else:
+        highest_upside_drag = str(valid_upside_drag.idxmax())
+
+    return (
+        f"Help-hurt read: `{best_downside}` currently shows the strongest downside "
+        "protection behavior versus passive exposure. "
+        f"`{highest_upside_drag}` shows the highest missed-upside risk when passive "
+        "Brazilian equity is positive. This is the central overlay trade-off: the "
+        "portfolio can reduce left-tail pain, but protection and income strategies "
+        "can also give away part of the rebound."
     )

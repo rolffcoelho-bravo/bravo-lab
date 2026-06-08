@@ -21,6 +21,8 @@ from bravo.config import BASELINE_REPORT_PATH, PROCESSED_DATA_DIR, REPORTS_DIR, 
 from bravo.data import load_market_data
 from bravo.diagnostics import (
     regime_performance_summary,
+    strategy_help_hurt_diagnostics,
+    strategy_help_hurt_interpretation,
     stress_window_interpretation,
     stress_window_summary,
 )
@@ -399,6 +401,53 @@ def _stress_window_to_markdown(summary: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
+
+def _help_hurt_to_markdown(summary: pd.DataFrame) -> str:
+    headers = [
+        "Strategy",
+        "Avg. Active Return",
+        "Active When Passive Up",
+        "Active When Passive Down",
+        "Hit Rate",
+        "Missed Upside Rate",
+        "Downside Protection Rate",
+        "Best Active Period",
+        "Worst Active Period",
+        "Primary Help",
+        "Primary Hurt",
+        "Obs.",
+    ]
+
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+
+    for strategy, row in summary.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(strategy),
+                    _format_percentage(row["avg_active_return"]),
+                    _format_percentage(row["avg_active_when_passive_positive"]),
+                    _format_percentage(row["avg_active_when_passive_negative"]),
+                    _format_percentage(row["hit_rate_vs_passive"]),
+                    _format_percentage(row["missed_upside_rate"]),
+                    _format_percentage(row["downside_protection_rate"]),
+                    _format_percentage(row["best_active_period"]),
+                    _format_percentage(row["worst_active_period"]),
+                    str(row["primary_help_zone"]),
+                    str(row["primary_hurt_zone"]),
+                    str(int(row["observations"])),
+                ]
+            )
+            + " |"
+        )
+
+    return "\n".join(lines)
+
+
 def _data_provenance_table(
     prices: pd.DataFrame,
     returns: pd.DataFrame,
@@ -699,8 +748,9 @@ def _report_structure() -> str:
 | 7 | Synthetic Overlay Results | Passive versus covered call versus collar versus stress-aware overlay |
 | 8 | Active Risk Diagnostics | Tracks active return, tracking error, hit rate, and information ratio |
 | 9 | Regime and Stress Diagnostics | Tests whether the overlay helps when market pressure rises |
-| 10 | Overlay Decision Matrix | When each strategy is useful or dangerous |
-| 11 to 12 | Results SWOT | How to cope with the signal before portfolio action |
+| 10 | Strategy Help-Hurt Diagnostics | Explains when each overlay adds value or creates drag |
+| 11 | Overlay Decision Matrix | When each strategy is useful or dangerous |
+| 12 to 13 | Results SWOT | How to cope with the signal before portfolio action |
 | 13 | ShockBridge Transmission Read | How stress moves into the book |
 | 14 | What To Watch Next | Confirmation signals and warning signals |
 | 15 | Model Limits and Evidence Files | What is proven, what is not, and what comes next |"""
@@ -758,6 +808,13 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
 
     stress_read = stress_window_interpretation(stress_summary)
 
+    help_hurt_summary = strategy_help_hurt_diagnostics(
+        strategy_returns=overlay_returns,
+        benchmark_column="passive_brazil_equity",
+    )
+
+    help_hurt_read = strategy_help_hurt_interpretation(help_hurt_summary)
+
     performance_summary_path = PROCESSED_DATA_DIR / "baseline_performance_summary.csv"
     regime_table_path = PROCESSED_DATA_DIR / "brazil_equity_regime_table.csv"
     overlay_returns_path = PROCESSED_DATA_DIR / "overlay_return_table.csv"
@@ -766,6 +823,7 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     active_risk_path = PROCESSED_DATA_DIR / "active_risk_summary.csv"
     regime_diagnostics_path = PROCESSED_DATA_DIR / "regime_performance_summary.csv"
     stress_window_path = PROCESSED_DATA_DIR / "stress_window_summary.csv"
+    help_hurt_path = PROCESSED_DATA_DIR / "strategy_help_hurt_summary.csv"
 
     performance_summary.to_csv(performance_summary_path)
     regime_table.to_csv(regime_table_path)
@@ -775,6 +833,7 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     active_risk_summary.to_csv(active_risk_path)
     regime_diagnostics.to_csv(regime_diagnostics_path, index=False)
     stress_summary.to_csv(stress_window_path)
+    help_hurt_summary.to_csv(help_hurt_path)
 
     start_date = data.prices.index.min().date()
     end_date = data.prices.index.max().date()
@@ -806,7 +865,7 @@ Generated at: **{generated_at}**
 
 Data window: **{start_date} to {end_date}**
 
-Target report length: **14 to 16 PDF pages**
+Target report length: **15 to 17 PDF pages**
 
 ## 1. Executive Signal
 
@@ -958,11 +1017,27 @@ and active-risk control matter most.
 
 {stress_read}
 
-## 11. Overlay Decision Matrix
+## 11. Strategy Help-Hurt Diagnostics
+
+The help-hurt diagnostic explains the trade-off behind each overlay. A strategy
+can protect the downside and still hurt the portfolio if it gives away too much
+rebound. It can also improve income while failing to protect the book when the
+benchmark is already falling.
+
+This section separates the periods where each overlay adds active value from the
+periods where it creates drag versus passive Brazilian equity.
+
+{_help_hurt_to_markdown(help_hurt_summary)}
+
+### Help-Hurt Interpretation
+
+{help_hurt_read}
+
+## 12. Overlay Decision Matrix
 
 {_strategy_decision_matrix()}
 
-## 12. Strategy Trade-Off
+## 13. Strategy Trade-Off
 
 **Best annualized return:** `{best_return}`
 
@@ -984,13 +1059,13 @@ but their cost and upside cap must be justified by the current risk state.
 Stress-aware switching adds discipline, but only if the regime signal is stable
 enough to avoid unnecessary turnover.
 
-## 13. Results SWOT
+## 14. Results SWOT
 
 How to cope with the signal before turning it into a portfolio action.
 
 {_results_swot()}
 
-## 14. ShockBridge Transmission Read
+## 15. ShockBridge Transmission Read
 
 Brazilian equity does not trade in isolation. The book can be hit through local
 rates, fiscal repricing, FX pressure, global volatility, commodity shocks, and
@@ -1004,7 +1079,7 @@ The key insight is simple: volatility is not only a number. It is a carrier of
 stress. When volatility rises with drawdown, the book is not just moving. It is
 absorbing transmission.
 
-## 15. What To Watch Next
+## 16. What To Watch Next
 
 {watch_next}
 
@@ -1012,7 +1087,7 @@ The next model version should not simply add complexity. It should improve the
 decision. The immediate test is whether transaction costs, tracking error, and
 stress subperiod performance confirm or weaken the current overlay ranking.
 
-## 16. What Would Break This View
+## 17. What Would Break This View
 
 This baseline view should be challenged if one of the following happens:
 
@@ -1025,7 +1100,7 @@ This baseline view should be challenged if one of the following happens:
 7. The information ratio is positive in the full sample but weak during stress windows.
 8. Tracking error rises without clear drawdown reduction or active return compensation.
 
-## 17. Model Limits and Governance
+## 18. Model Limits and Governance
 
 This report is intentionally clear about what it does not prove.
 
@@ -1038,7 +1113,7 @@ This report is intentionally clear about what it does not prove.
 - Active risk diagnostics are useful but still require stress-window validation.
 - This is research infrastructure, not investment advice.
 
-## 18. Generated Evidence Files
+## 19. Generated Evidence Files
 
 - `{performance_summary_path}`
 - `{regime_table_path}`
@@ -1048,16 +1123,17 @@ This report is intentionally clear about what it does not prove.
 - `{active_risk_path}`
 - `{regime_diagnostics_path}`
 - `{stress_window_path}`
+- `{help_hurt_path}`
 - `{output_path}`
 
-## 19. Next Upgrade
+## 20. Next Upgrade
 
 The next upgrade should turn this from a stress-window decision memo into a
 more realistic implementation framework:
 
 1. test alternative transaction-cost levels
 2. calculate active risk by regime depth and drawdown severity
-3. add strategy diagnostics explaining when each overlay helps or hurts
+3. isolate implementation drag from premium income
 4. integrate real B3 option-chain data when available
 5. prepare the path for GARCH, MTV-GARCH, and Brazil Stress Transmission Index integration
 
