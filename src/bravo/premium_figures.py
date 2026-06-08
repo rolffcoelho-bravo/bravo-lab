@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from pathlib import Path
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -179,6 +180,8 @@ def _save(fig, path: Path) -> Path:
     # Calling tight_layout on that figure creates harmless warning noise,
     # so layout is only tightened for standard chart figures.
     if "executive_risk_dashboard" not in path.name:
+        with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
         fig.tight_layout(rect=[0, 0.035, 1, 1])
 
     fig.savefig(path, dpi=260, bbox_inches="tight")
