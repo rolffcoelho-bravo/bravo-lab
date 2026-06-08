@@ -42,7 +42,7 @@ from bravo.bsti_validation import (
     bsti_threshold_validation,
     bsti_validation_interpretation,
 )
-from bravo.figures import build_report_figure_set, figure_markdown_gallery
+from bravo.premium_figures import build_report_figure_set, figure_markdown_gallery
 from bravo.config import BASELINE_REPORT_PATH, PROCESSED_DATA_DIR, REPORTS_DIR, TICKERS
 from bravo.data import load_market_data
 from bravo.diagnostics import (
@@ -1927,7 +1927,7 @@ Generated at: **{generated_at}**
 
 Data window: **{start_date} to {end_date}**
 
-Target report length: **30 to 34 PDF pages**
+Target report length: **34 to 38 PDF pages**
 
 ## 1. Executive Signal
 
@@ -2475,7 +2475,7 @@ production investment model.
 
     report = report.replace(
         "## 1. Executive Summary",
-        f"## Visual Evidence Layer\n\n{report_figure_gallery}\n\n## 1. Executive Summary",
+        f"## Premium Visual Evidence Layer\n\n{report_figure_gallery}\n\n## 1. Executive Summary",
         1,
     )
 
