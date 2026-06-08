@@ -2,19 +2,19 @@
 
 **Subtitle:** Brazilian Equity Risk, Volatility Transmission, and Synthetic Protection Logic
 
-Generated at: **2026-06-08 18:53:47 UTC**
+Generated at: **2026-06-08 19:05:02 UTC**
 
 Data window: **2014-01-02 to 2026-06-08**
 
-Target report length: **10 to 12 PDF pages**
+Target report length: **11 to 13 PDF pages**
 
 ## 1. Executive Signal
 
 **Current regime:** `stress`
 
-**Latest realized volatility:** 16.41%
+**Latest realized volatility:** 16.40%
 
-**Latest drawdown:** -15.17%
+**Latest drawdown:** -15.20%
 
 **Decision bias:** Protection bias. The current signal gives more weight to drawdown control than to full upside capture. The strongest drawdown profile is currently `collar`. The strongest risk-adjusted profile is currently `collar`.
 
@@ -27,14 +27,15 @@ ShockBridge Signal: the market is inside a stress transmission zone. Covered cal
 | 1 | Executive Signal | Current regime, decision bias, and portfolio read |
 | 2 | Portfolio Question | What the framework is trying to decide |
 | 3 | Market State | Cross-market context for Brazil exposure |
-| 4 | Regime Diagnosis | Volatility, drawdown, and current regime |
-| 5 | Baseline Risk Metrics | Return, risk, Sharpe, drawdown, VaR, CVaR |
-| 6 | Synthetic Overlay Results | Passive versus covered call versus collar |
-| 7 | Overlay Decision Matrix | When each strategy is useful or dangerous |
-| 8 to 9 | Results SWOT | How to cope with the signal before portfolio action |
-| 10 | ShockBridge Transmission Read | How stress moves into the book |
-| 11 | What To Watch Next | Confirmation signals and warning signals |
-| 12 | Model Limits and Evidence Files | What is proven, what is not, and what comes next |
+| 4 | Data Provenance | Separates real data, derived metrics, synthetic assumptions, and model rules |
+| 5 | Regime Diagnosis | Volatility, drawdown, and current regime |
+| 6 | Baseline Risk Metrics | Return, risk, Sharpe, drawdown, VaR, CVaR |
+| 7 | Synthetic Overlay Results | Passive versus covered call versus collar versus stress-aware overlay |
+| 8 | Overlay Decision Matrix | When each strategy is useful or dangerous |
+| 9 to 10 | Results SWOT | How to cope with the signal before portfolio action |
+| 11 | ShockBridge Transmission Read | How stress moves into the book |
+| 12 | What To Watch Next | Confirmation signals and warning signals |
+| 13 | Model Limits and Evidence Files | What is proven, what is not, and what comes next |
 
 ## 3. Portfolio Question
 
@@ -60,7 +61,34 @@ This is not yet a full production model. It is a clean research base. The value
 is transparency. A reviewer can inspect the assumptions, rerun the output, and
 challenge the decision logic.
 
-## 5. Regime Diagnosis
+## 5. Data Provenance and Evidence Classification
+
+A robust report must separate observed data from modeled signals.
+
+The market layer uses real public market data downloaded through Yahoo Finance
+with `yfinance`. The derivatives layer is synthetic. Covered call and collar
+premiums are estimated through the Black-Scholes engine until real B3
+listed-option chains are integrated.
+
+This distinction matters. A real price series can support risk measurement. A
+synthetic option premium can support research design. It cannot yet support live
+execution decisions.
+
+| Layer | Item | Source | Evidence Type | Status |
+| --- | --- | --- | --- | --- |
+| market_data | brazil_equity | Yahoo Finance through yfinance | real_public_market_price_series | real market proxy |
+| market_data | brazil_external | Yahoo Finance through yfinance | real_public_market_price_series | real market proxy |
+| market_data | global_equity | Yahoo Finance through yfinance | real_public_market_price_series | real market proxy |
+| market_data | fx_usdbrl | Yahoo Finance through yfinance | real_public_market_price_series | real market proxy |
+| market_data | vix | Yahoo Finance through yfinance | real_public_market_price_series | real market proxy |
+| derived_metric | realized_volatility | BRAVO Lab calculation | model_derived | derived from real market data |
+| derived_metric | drawdown | BRAVO Lab calculation | model_derived | derived from real market data |
+| regime_signal | baseline_regime_classifier | BRAVO Lab rule-based classifier | model_generated_signal | decision signal, not observed market data |
+| synthetic_derivatives | covered_call_overlay | BRAVO Lab synthetic option engine | synthetic_research_assumption | not real B3 option-chain evidence |
+| synthetic_derivatives | collar_overlay | BRAVO Lab synthetic option engine | synthetic_research_assumption | not real B3 option-chain evidence |
+| strategy_logic | stress_aware_overlay | BRAVO Lab switching rule | model_generated_strategy_rule | research rule requiring validation |
+
+## 6. Regime Diagnosis
 
 The current Brazilian equity signal sits in `stress`.
 
@@ -78,9 +106,9 @@ machine learning.
 
 Latest classified regime: **stress**
 
-Latest realized volatility: **16.41%**
+Latest realized volatility: **16.40%**
 
-Latest drawdown: **-15.17%**
+Latest drawdown: **-15.20%**
 
 ### Regime Distribution
 
@@ -92,7 +120,7 @@ Latest drawdown: **-15.17%**
 | fragile | 334 | 11.26% |
 | neutral | 302 | 10.18% |
 
-## 6. Baseline Risk Metrics
+## 7. Baseline Risk Metrics
 
 The table below gives the first risk layer across the monitored assets. It is
 not a final allocation model. It is the risk map used to decide whether the
@@ -101,12 +129,12 @@ overlay discussion is taking place in a calm, fragile, or stressed environment.
 | Asset | Ann. Return | Ann. Volatility | Sharpe | Sortino | Max Drawdown | VaR 95% | CVaR 95% | Obs. |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | brazil_equity | 9.92% | 23.14% | 0.525 | 0.686 | -46.93% | -2.21% | -3.28% | 3238 |
-| fx_usdbrl | 6.13% | 16.44% | 0.444 | 0.684 | -26.80% | -1.59% | -2.23% | 3238 |
+| fx_usdbrl | 6.32% | 16.45% | 0.454 | 0.701 | -26.80% | -1.59% | -2.23% | 3238 |
 | brazil_external | 2.57% | 33.91% | 0.246 | 0.323 | -66.54% | -3.30% | -4.84% | 3238 |
-| global_equity | 13.32% | 16.92% | 0.824 | 0.987 | -33.72% | -1.60% | -2.59% | 3238 |
-| vix | 2.08% | 133.48% | 0.623 | 1.273 | -85.66% | -10.53% | -14.21% | 3238 |
+| global_equity | 13.32% | 16.92% | 0.824 | 0.986 | -33.72% | -1.60% | -2.59% | 3238 |
+| vix | 2.12% | 133.47% | 0.623 | 1.274 | -85.66% | -10.53% | -14.21% | 3238 |
 
-## 7. Synthetic Overlay Results
+## 8. Synthetic Overlay Results
 
 The first overlay engine compares four exposures:
 
@@ -130,12 +158,12 @@ annualized using **12.0 periods per year**.
 
 | Strategy | Ann. Return | Ann. Volatility | Sharpe | Max Drawdown | Best Period | Worst Period | Obs. |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| passive_brazil_equity | 9.93% | 22.24% | 0.544 | -37.77% | 21.22% | -35.92% | 151 |
+| passive_brazil_equity | 9.93% | 22.24% | 0.543 | -37.77% | 21.22% | -35.92% | 151 |
 | covered_call | 7.92% | 16.80% | 0.549 | -36.79% | 10.57% | -35.16% | 151 |
-| collar | 5.54% | 10.23% | 0.580 | -21.49% | 4.11% | -4.76% | 151 |
-| stress_aware_overlay | 6.80% | 13.62% | 0.552 | -23.01% | 10.58% | -14.33% | 151 |
+| collar | 5.54% | 10.23% | 0.579 | -21.49% | 4.11% | -4.76% | 151 |
+| stress_aware_overlay | 6.79% | 13.62% | 0.552 | -23.01% | 10.58% | -14.33% | 151 |
 
-## 8. Overlay Decision Matrix
+## 9. Overlay Decision Matrix
 
 | Strategy | Best Use | Main Risk | Portfolio Reading |
 | --- | --- | --- | --- |
@@ -144,7 +172,7 @@ annualized using **12.0 periods per year**.
 | Collar | Stress regime, drawdown pressure, capital preservation | Protection cost and capped upside | Use when left-tail control matters more than return maximization |
 | Stress-Aware Overlay | Regime-dependent switching | Model risk and signal timing | Uses passive in calm regimes, covered calls in fragile regimes, and collars in stress regimes |
 
-## 9. Strategy Trade-Off
+## 10. Strategy Trade-Off
 
 **Best annualized return:** `passive_brazil_equity`
 
@@ -162,7 +190,7 @@ calls convert part of upside into premium income, which can help in sideways or
 moderately volatile markets. Collars give the book a defined protection logic,
 but their cost and upside cap must be justified by the current risk state.
 
-## 10. Results SWOT
+## 11. Results SWOT
 
 How to cope with the signal before turning it into a portfolio action.
 
@@ -187,7 +215,7 @@ The main opportunity is regime switching. A static covered call or collar strate
 
 The main threat is clean-model illusion. A strategy can look strong before costs, spreads, liquidity, and stress subperiods. The next version must attack that weakness directly.
 
-## 11. ShockBridge Transmission Read
+## 12. ShockBridge Transmission Read
 
 Brazilian equity does not trade in isolation. The book can be hit through local
 rates, fiscal repricing, FX pressure, global volatility, commodity shocks, and
@@ -201,7 +229,7 @@ The key insight is simple: volatility is not only a number. It is a carrier of
 stress. When volatility rises with drawdown, the book is not just moving. It is
 absorbing transmission.
 
-## 12. What To Watch Next
+## 13. What To Watch Next
 
 Watch whether drawdown stabilizes while realized volatility falls. If that does not happen, protection remains more valuable than income. If volatility falls without price repair, the market may be hiding fragility under calmer surface data.
 
@@ -209,7 +237,7 @@ The next model version should not simply add complexity. It should improve the
 decision. The immediate test is whether transaction costs, tracking error, and
 stress subperiod performance confirm or weaken the current overlay ranking.
 
-## 13. What Would Break This View
+## 14. What Would Break This View
 
 This baseline view should be challenged if one of the following happens:
 
@@ -220,7 +248,7 @@ This baseline view should be challenged if one of the following happens:
 5. The covered call improves income but systematically sells the strongest rebounds.
 6. The model performs well in the full sample but fails in stress subperiods.
 
-## 14. Model Limits and Governance
+## 15. Model Limits and Governance
 
 This report is intentionally clear about what it does not prove.
 
@@ -232,15 +260,16 @@ This report is intentionally clear about what it does not prove.
 - The regime classifier is transparent but not final.
 - This is research infrastructure, not investment advice.
 
-## 15. Generated Evidence Files
+## 16. Generated Evidence Files
 
 - `E:\Claude AI\Project_bravo\data\processed\baseline_performance_summary.csv`
 - `E:\Claude AI\Project_bravo\data\processed\brazil_equity_regime_table.csv`
 - `E:\Claude AI\Project_bravo\data\processed\overlay_return_table.csv`
 - `E:\Claude AI\Project_bravo\data\processed\overlay_performance_summary.csv`
+- `E:\Claude AI\Project_bravo\data\processed\data_provenance_table.csv`
 - `E:\Claude AI\Project_bravo\reports\baseline_report.md`
 
-## 16. Next Upgrade
+## 17. Next Upgrade
 
 The next upgrade should turn this from a static overlay comparison into a
 stress-aware decision engine:

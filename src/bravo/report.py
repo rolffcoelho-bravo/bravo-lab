@@ -2,8 +2,8 @@
 Institutional report generation for BRAVO Lab.
 
 This module turns the BRAVO Lab baseline pipeline into a decision memo:
-market state, regime diagnosis, overlay trade-off, results SWOT, decision bias,
-model limits, and next risk signals.
+market state, data provenance, regime diagnosis, overlay trade-off, results SWOT,
+decision bias, model limits, and next risk signals.
 
 The report is written for portfolio review. It is not a trading recommendation.
 """
@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from bravo.config import BASELINE_REPORT_PATH, PROCESSED_DATA_DIR, REPORTS_DIR
+from bravo.config import BASELINE_REPORT_PATH, PROCESSED_DATA_DIR, REPORTS_DIR, TICKERS
 from bravo.data import load_market_data
 from bravo.metrics import summarize_performance
 from bravo.strategies import build_overlay_return_table
@@ -198,6 +198,170 @@ def _overlay_table_to_markdown(summary: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
+def _data_provenance_table(
+    prices: pd.DataFrame,
+    returns: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Build a data provenance table.
+
+    The objective is to separate real market data, derived metrics,
+    model-generated signals, and synthetic derivatives assumptions.
+    """
+    rows = []
+
+    for label, ticker in TICKERS.items():
+        if label not in prices.columns:
+            continue
+
+        price_series = prices[label].dropna()
+
+        if label in returns.columns:
+            return_series = returns[label].dropna()
+        else:
+            return_series = pd.Series(dtype=float)
+
+        rows.append(
+            {
+                "layer": "market_data",
+                "item": label,
+                "ticker_or_input": ticker,
+                "source": "Yahoo Finance through yfinance",
+                "evidence_type": "real_public_market_price_series",
+                "transformation": "adjusted close prices and daily returns",
+                "start_date": price_series.index.min().date()
+                if not price_series.empty
+                else "NA",
+                "end_date": price_series.index.max().date()
+                if not price_series.empty
+                else "NA",
+                "price_observations": len(price_series),
+                "return_observations": len(return_series),
+                "status": "real market proxy",
+            }
+        )
+
+    rows.extend(
+        [
+            {
+                "layer": "derived_metric",
+                "item": "realized_volatility",
+                "ticker_or_input": "brazil_equity returns",
+                "source": "BRAVO Lab calculation",
+                "evidence_type": "model_derived",
+                "transformation": "rolling standard deviation annualized",
+                "start_date": "derived from available market window",
+                "end_date": "derived from available market window",
+                "price_observations": "NA",
+                "return_observations": "NA",
+                "status": "derived from real market data",
+            },
+            {
+                "layer": "derived_metric",
+                "item": "drawdown",
+                "ticker_or_input": "brazil_equity returns",
+                "source": "BRAVO Lab calculation",
+                "evidence_type": "model_derived",
+                "transformation": "cumulative return versus running maximum",
+                "start_date": "derived from available market window",
+                "end_date": "derived from available market window",
+                "price_observations": "NA",
+                "return_observations": "NA",
+                "status": "derived from real market data",
+            },
+            {
+                "layer": "regime_signal",
+                "item": "baseline_regime_classifier",
+                "ticker_or_input": "volatility percentile and drawdown",
+                "source": "BRAVO Lab rule-based classifier",
+                "evidence_type": "model_generated_signal",
+                "transformation": "calm, fragile, stress, extreme_stress classification",
+                "start_date": "derived from available market window",
+                "end_date": "derived from available market window",
+                "price_observations": "NA",
+                "return_observations": "NA",
+                "status": "decision signal, not observed market data",
+            },
+            {
+                "layer": "synthetic_derivatives",
+                "item": "covered_call_overlay",
+                "ticker_or_input": "BOVA11 proxy plus Black-Scholes premium",
+                "source": "BRAVO Lab synthetic option engine",
+                "evidence_type": "synthetic_research_assumption",
+                "transformation": "monthly synthetic short call overlay",
+                "start_date": "derived from available market window",
+                "end_date": "derived from available market window",
+                "price_observations": "NA",
+                "return_observations": "NA",
+                "status": "not real B3 option-chain evidence",
+            },
+            {
+                "layer": "synthetic_derivatives",
+                "item": "collar_overlay",
+                "ticker_or_input": "BOVA11 proxy plus Black-Scholes premium",
+                "source": "BRAVO Lab synthetic option engine",
+                "evidence_type": "synthetic_research_assumption",
+                "transformation": "monthly synthetic long put and short call overlay",
+                "start_date": "derived from available market window",
+                "end_date": "derived from available market window",
+                "price_observations": "NA",
+                "return_observations": "NA",
+                "status": "not real B3 option-chain evidence",
+            },
+            {
+                "layer": "strategy_logic",
+                "item": "stress_aware_overlay",
+                "ticker_or_input": "baseline regime classifier",
+                "source": "BRAVO Lab switching rule",
+                "evidence_type": "model_generated_strategy_rule",
+                "transformation": "passive in calm, covered call in fragile, collar in stress",
+                "start_date": "derived from available market window",
+                "end_date": "derived from available market window",
+                "price_observations": "NA",
+                "return_observations": "NA",
+                "status": "research rule requiring validation",
+            },
+        ]
+    )
+
+    return pd.DataFrame(rows)
+
+
+def _data_provenance_to_markdown(provenance: pd.DataFrame) -> str:
+    """
+    Convert data provenance table into a compact markdown table.
+    """
+    headers = [
+        "Layer",
+        "Item",
+        "Source",
+        "Evidence Type",
+        "Status",
+    ]
+
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+
+    for _, row in provenance.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(row["layer"]),
+                    str(row["item"]),
+                    str(row["source"]),
+                    str(row["evidence_type"]),
+                    str(row["status"]),
+                ]
+            )
+            + " |"
+        )
+
+    return "\n".join(lines)
+
+
 def _safe_idxmax(summary: pd.DataFrame, column: str) -> str:
     valid = summary[column].dropna()
 
@@ -337,14 +501,15 @@ def _report_structure() -> str:
 | 1 | Executive Signal | Current regime, decision bias, and portfolio read |
 | 2 | Portfolio Question | What the framework is trying to decide |
 | 3 | Market State | Cross-market context for Brazil exposure |
-| 4 | Regime Diagnosis | Volatility, drawdown, and current regime |
-| 5 | Baseline Risk Metrics | Return, risk, Sharpe, drawdown, VaR, CVaR |
-| 6 | Synthetic Overlay Results | Passive versus covered call versus collar |
-| 7 | Overlay Decision Matrix | When each strategy is useful or dangerous |
-| 8 to 9 | Results SWOT | How to cope with the signal before portfolio action |
-| 10 | ShockBridge Transmission Read | How stress moves into the book |
-| 11 | What To Watch Next | Confirmation signals and warning signals |
-| 12 | Model Limits and Evidence Files | What is proven, what is not, and what comes next |"""
+| 4 | Data Provenance | Separates real data, derived metrics, synthetic assumptions, and model rules |
+| 5 | Regime Diagnosis | Volatility, drawdown, and current regime |
+| 6 | Baseline Risk Metrics | Return, risk, Sharpe, drawdown, VaR, CVaR |
+| 7 | Synthetic Overlay Results | Passive versus covered call versus collar versus stress-aware overlay |
+| 8 | Overlay Decision Matrix | When each strategy is useful or dangerous |
+| 9 to 10 | Results SWOT | How to cope with the signal before portfolio action |
+| 11 | ShockBridge Transmission Read | How stress moves into the book |
+| 12 | What To Watch Next | Confirmation signals and warning signals |
+| 13 | Model Limits and Evidence Files | What is proven, what is not, and what comes next |"""
 
 
 def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
@@ -353,6 +518,10 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
 
     data = load_market_data()
     performance_summary = summarize_performance(data.returns)
+    data_provenance = _data_provenance_table(
+        prices=data.prices,
+        returns=data.returns,
+    )
 
     if "brazil_equity" not in data.returns.columns:
         raise KeyError("Expected 'brazil_equity' in returns. Check ticker configuration.")
@@ -364,12 +533,12 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     transaction_cost_bps = 5.0
 
     overlay_returns = build_overlay_return_table(
-    prices=data.prices["brazil_equity"],
-    returns=data.returns["brazil_equity"],
-    regime=regime_table["regime"],
-    maturity_days=maturity_days,
-    transaction_cost_bps=transaction_cost_bps,
-)
+        prices=data.prices["brazil_equity"],
+        returns=data.returns["brazil_equity"],
+        regime=regime_table["regime"],
+        maturity_days=maturity_days,
+        transaction_cost_bps=transaction_cost_bps,
+    )
 
     overlay_summary = _summarize_periodic_strategy_returns(
         returns=overlay_returns,
@@ -380,11 +549,13 @@ def generate_baseline_report(output_path: Path = BASELINE_REPORT_PATH) -> Path:
     regime_table_path = PROCESSED_DATA_DIR / "brazil_equity_regime_table.csv"
     overlay_returns_path = PROCESSED_DATA_DIR / "overlay_return_table.csv"
     overlay_summary_path = PROCESSED_DATA_DIR / "overlay_performance_summary.csv"
+    data_provenance_path = PROCESSED_DATA_DIR / "data_provenance_table.csv"
 
     performance_summary.to_csv(performance_summary_path)
     regime_table.to_csv(regime_table_path)
     overlay_returns.to_csv(overlay_returns_path)
     overlay_summary.to_csv(overlay_summary_path)
+    data_provenance.to_csv(data_provenance_path, index=False)
 
     start_date = data.prices.index.min().date()
     end_date = data.prices.index.max().date()
@@ -415,7 +586,7 @@ Generated at: **{generated_at}**
 
 Data window: **{start_date} to {end_date}**
 
-Target report length: **10 to 12 PDF pages**
+Target report length: **11 to 13 PDF pages**
 
 ## 1. Executive Signal
 
@@ -457,7 +628,22 @@ This is not yet a full production model. It is a clean research base. The value
 is transparency. A reviewer can inspect the assumptions, rerun the output, and
 challenge the decision logic.
 
-## 5. Regime Diagnosis
+## 5. Data Provenance and Evidence Classification
+
+A robust report must separate observed data from modeled signals.
+
+The market layer uses real public market data downloaded through Yahoo Finance
+with `yfinance`. The derivatives layer is synthetic. Covered call and collar
+premiums are estimated through the Black-Scholes engine until real B3
+listed-option chains are integrated.
+
+This distinction matters. A real price series can support risk measurement. A
+synthetic option premium can support research design. It cannot yet support live
+execution decisions.
+
+{_data_provenance_to_markdown(data_provenance)}
+
+## 6. Regime Diagnosis
 
 The current Brazilian equity signal sits in `{latest_regime}`.
 
@@ -483,7 +669,7 @@ Latest drawdown: **{_format_percentage(latest_drawdown)}**
 
 {_regime_counts_to_markdown(regime_table)}
 
-## 6. Baseline Risk Metrics
+## 7. Baseline Risk Metrics
 
 The table below gives the first risk layer across the monitored assets. It is
 not a final allocation model. It is the risk map used to decide whether the
@@ -491,7 +677,7 @@ overlay discussion is taking place in a calm, fragile, or stressed environment.
 
 {_performance_table_to_markdown(performance_summary)}
 
-## 7. Synthetic Overlay Results
+## 8. Synthetic Overlay Results
 
 The first overlay engine compares four exposures:
 
@@ -515,11 +701,11 @@ annualized using **{periods_per_year:.1f} periods per year**.
 
 {_overlay_table_to_markdown(overlay_summary)}
 
-## 8. Overlay Decision Matrix
+## 9. Overlay Decision Matrix
 
 {_strategy_decision_matrix()}
 
-## 9. Strategy Trade-Off
+## 10. Strategy Trade-Off
 
 **Best annualized return:** `{best_return}`
 
@@ -537,13 +723,13 @@ calls convert part of upside into premium income, which can help in sideways or
 moderately volatile markets. Collars give the book a defined protection logic,
 but their cost and upside cap must be justified by the current risk state.
 
-## 10. Results SWOT
+## 11. Results SWOT
 
 How to cope with the signal before turning it into a portfolio action.
 
 {_results_swot()}
 
-## 11. ShockBridge Transmission Read
+## 12. ShockBridge Transmission Read
 
 Brazilian equity does not trade in isolation. The book can be hit through local
 rates, fiscal repricing, FX pressure, global volatility, commodity shocks, and
@@ -557,7 +743,7 @@ The key insight is simple: volatility is not only a number. It is a carrier of
 stress. When volatility rises with drawdown, the book is not just moving. It is
 absorbing transmission.
 
-## 12. What To Watch Next
+## 13. What To Watch Next
 
 {watch_next}
 
@@ -565,7 +751,7 @@ The next model version should not simply add complexity. It should improve the
 decision. The immediate test is whether transaction costs, tracking error, and
 stress subperiod performance confirm or weaken the current overlay ranking.
 
-## 13. What Would Break This View
+## 14. What Would Break This View
 
 This baseline view should be challenged if one of the following happens:
 
@@ -576,7 +762,7 @@ This baseline view should be challenged if one of the following happens:
 5. The covered call improves income but systematically sells the strongest rebounds.
 6. The model performs well in the full sample but fails in stress subperiods.
 
-## 14. Model Limits and Governance
+## 15. Model Limits and Governance
 
 This report is intentionally clear about what it does not prove.
 
@@ -588,15 +774,16 @@ This report is intentionally clear about what it does not prove.
 - The regime classifier is transparent but not final.
 - This is research infrastructure, not investment advice.
 
-## 15. Generated Evidence Files
+## 16. Generated Evidence Files
 
 - `{performance_summary_path}`
 - `{regime_table_path}`
 - `{overlay_returns_path}`
 - `{overlay_summary_path}`
+- `{data_provenance_path}`
 - `{output_path}`
 
-## 16. Next Upgrade
+## 17. Next Upgrade
 
 The next upgrade should turn this from a static overlay comparison into a
 stress-aware decision engine:
