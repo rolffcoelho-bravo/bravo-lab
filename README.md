@@ -1,6 +1,10 @@
+# BRAVO Lab
+
+**Brazilian Risk, Allocation, Volatility & Options Lab**
+
 ## Start Here
 
-BRAVO Lab now includes a front-office report package for fast review.
+BRAVO Lab includes a front-office report package for fast review.
 
 | Entry point | Purpose |
 | --- | --- |
@@ -16,9 +20,6 @@ The fastest way to review the project is:
 3. Inspect the full baseline report.
 4. Verify the generated CSV outputs in `data/processed/`.
 
-﻿# BRAVO Lab
-
-**Brazilian Risk, Allocation, Volatility & Options Lab**
 
 BRAVO Lab is a Python research pipeline for transforming Brazilian market volatility, derivatives overlays, contagion signals, and dynamic risk regimes into portfolio-grade analytical reports.
 
@@ -175,5 +176,3 @@ If you use this project, its code, methodology, diagnostics, research structure,
       type = {Python research software},
       url = {https://github.com/rolffcoelho-bravo/bravo-lab}
     }
-
-
