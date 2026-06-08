@@ -1,4 +1,4 @@
-# BRAVO Lab
+﻿# BRAVO Lab
 
 **Brazilian Risk, Allocation, Volatility & Options Lab**
 
@@ -65,22 +65,22 @@ The project follows a layered methodology:
 
 ```text
 bravo-lab/
-├── app/
-├── data/
-│   ├── raw/
-│   └── processed/
-├── docs/
-│   ├── methodology.md
-│   └── reviewer_guide.md
-├── notebooks/
-├── reports/
-│   ├── figures/
-│   └── nu_asset_application_note.md
-├── src/
-│   └── bravo/
-├── Makefile
-├── README.md
-└── requirements.txt
+â”œâ”€â”€ app/
+â”œâ”€â”€ data/
+â”‚   â”œâ”€â”€ raw/
+â”‚   â””â”€â”€ processed/
+â”œâ”€â”€ docs/
+â”‚   â”œâ”€â”€ methodology.md
+â”‚   â””â”€â”€ reviewer_guide.md
+â”œâ”€â”€ notebooks/
+â”œâ”€â”€ reports/
+â”‚   â”œâ”€â”€ figures/
+â”‚   â””â”€â”€ nu_asset_application_note.md
+â”œâ”€â”€ src/
+â”‚   â””â”€â”€ bravo/
+â”œâ”€â”€ Makefile
+â”œâ”€â”€ README.md
+â””â”€â”€ requirements.txt
 ```
 
 ## Quickstart
@@ -137,3 +137,23 @@ This repository is intentionally transparent about what is implemented and what 
 ## Disclaimer
 
 This project is for research, education, and portfolio infrastructure demonstration only. It does not provide investment advice, trading recommendations, or performance guarantees.
+
+## Citation
+
+BRAVO Lab is released under the MIT License. You are free to use, modify, and build on the code under the terms of that license.
+
+If you use this project, its code, methodology, diagnostics, research structure, or analytical framework in academic work, professional research, reports, presentations, or derivative projects, please cite:
+
+> Pereira, Rodolfo. (2026). *BRAVO Lab: Brazilian Risk, Allocation, Volatility & Options Lab*. ShockBridge Pulse Research. Python research software. https://github.com/rolffcoelho-bravo/bravo-lab
+
+### BibTeX
+
+    @software{pereira2026bravolab,
+      author = {Pereira, Rodolfo},
+      title = {BRAVO Lab: Brazilian Risk, Allocation, Volatility & Options Lab},
+      year = {2026},
+      publisher = {ShockBridge Pulse Research},
+      type = {Python research software},
+      url = {https://github.com/rolffcoelho-bravo/bravo-lab}
+    }
+

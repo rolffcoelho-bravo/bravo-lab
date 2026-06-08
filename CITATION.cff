@@ -1,0 +1,29 @@
+﻿cff-version: 1.2.0
+message: "If you use BRAVO Lab, please cite it as below."
+title: "BRAVO Lab: Brazilian Risk, Allocation, Volatility & Options Lab"
+authors:
+  - family-names: "Pereira"
+    given-names: "Rodolfo"
+year: 2026
+type: software
+license: MIT
+repository-code: "https://github.com/rolffcoelho-bravo/bravo-lab"
+abstract: "BRAVO Lab is a Python research pipeline for Brazilian market risk, volatility, stress transmission, derivatives overlays, and portfolio-governance diagnostics."
+keywords:
+  - Brazilian markets
+  - volatility
+  - options
+  - stress transmission
+  - portfolio governance
+  - risk management
+  - derivatives overlays
+  - Brazil Stress Transmission Index
+  - Python
+preferred-citation:
+  type: software
+  title: "BRAVO Lab: Brazilian Risk, Allocation, Volatility & Options Lab"
+  authors:
+    - family-names: "Pereira"
+      given-names: "Rodolfo"
+  year: 2026
+  repository-code: "https://github.com/rolffcoelho-bravo/bravo-lab"
