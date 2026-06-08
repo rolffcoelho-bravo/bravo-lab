@@ -1,3 +1,21 @@
+## Start Here
+
+BRAVO Lab now includes a front-office report package for fast review.
+
+| Entry point | Purpose |
+| --- | --- |
+| [`reports/front_office_memo.md`](reports/front_office_memo.md) | Short portfolio-governance memo for PMs, risk committees, allocators, and reviewers |
+| [`reports/baseline_report.md`](reports/baseline_report.md) | Full quant/risk report with methodology, diagnostics, evidence files, and limitations |
+| [`reports/README.md`](reports/README.md) | Report navigation guide |
+| [`reports/figures/00_executive_risk_dashboard.png`](reports/figures/00_executive_risk_dashboard.png) | Premium executive risk dashboard |
+
+The fastest way to review the project is:
+
+1. Read the front-office memo.
+2. Open the executive risk dashboard.
+3. Inspect the full baseline report.
+4. Verify the generated CSV outputs in `data/processed/`.
+
 ﻿# BRAVO Lab
 
 **Brazilian Risk, Allocation, Volatility & Options Lab**
