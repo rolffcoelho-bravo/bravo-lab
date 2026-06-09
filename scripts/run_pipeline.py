@@ -62,6 +62,16 @@ def restore_generated_outputs() -> None:
     )
 
 
+def open_final_pdf() -> None:
+    """Open the final PDF report at the end of a successful local pipeline run."""
+    if sys.platform.startswith("win"):
+        import os
+        os.startfile(CANONICAL_REPORT)
+    elif sys.platform == "darwin":
+        subprocess.run(["open", str(CANONICAL_REPORT)], check=False)
+    else:
+        subprocess.run(["xdg-open", str(CANONICAL_REPORT)], check=False)
+
 def main() -> int:
     print("BRAVO Lab full pipeline")
     print(f"Project root: {ROOT}")
@@ -118,3 +128,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
