@@ -46,7 +46,7 @@ def main() -> None:
         "scripts/generate_institutional_pdf.py",
     ])
 
-    check_output(ROOT / "reports" / "BRAVO_Lab_Executive_Report_v0.1.2_styled.pdf", "final styled report")
+    check_output(ROOT / "reports" / "BRAVO_Lab_Executive_Report_v0.1.2.pdf", "final styled report")
 
     run_step("Run tests", [
         sys.executable,
@@ -59,8 +59,9 @@ def main() -> None:
     print("BRAVO PIPELINE FINISHED SUCCESSFULLY")
     print("=" * 72)
     print("Main report:")
-    print("reports/BRAVO_Lab_Executive_Report_v0.1.2_styled.pdf")
+    print("reports/BRAVO_Lab_Executive_Report_v0.1.2.pdf")
 
 
 if __name__ == "__main__":
     main()
+

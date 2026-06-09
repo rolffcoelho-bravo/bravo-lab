@@ -1,10 +1,10 @@
-# BRAVO Lab Review Guide
+﻿# BRAVO Lab Review Guide
 
 BRAVO Lab is an employer-neutral research and portfolio-risk project. It was not built for one company, one recruiter, or one application process.
 
 ## What the reviewer should open first
 
-1. `reports/BRAVO_Lab_Executive_Report_v0.1.2_styled.pdf`
+1. `reports/BRAVO_Lab_Executive_Report_v0.1.2.pdf`
 2. `reports/front_office_memo.md`
 3. `reports/baseline_report.md`
 4. `reports/figures/`
@@ -43,3 +43,4 @@ The current version does not yet implement GARCH, MTV-GARCH, CCA, wavelets, or m
 ## Production limitations
 
 The derivative layer is synthetic. Real listed-option data, bid-ask spreads, liquidity filters, tax treatment, roll rules, and execution constraints must be integrated before any live trading or production claim.
+

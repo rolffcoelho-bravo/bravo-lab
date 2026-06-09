@@ -1,8 +1,8 @@
-# Final Report Status
+﻿# Final Report Status
 
 Locked public report version:
 
-`BRAVO_Lab_Executive_Report_v0.1.2_styled.pdf`
+`BRAVO_Lab_Executive_Report_v0.1.2.pdf`
 
 This is the public-facing BRAVO Lab report for professional review.
 
@@ -11,3 +11,4 @@ The project demonstrates a reproducible portfolio-risk research workflow: market
 This repository is employer-neutral. It is not branded for any single company, recruiter, or application process.
 
 Research prototype. Not investment advice.
+
