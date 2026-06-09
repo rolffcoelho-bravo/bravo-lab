@@ -1,4 +1,4 @@
-﻿# BRAVO Lab
+# BRAVO Lab
 
 **Brazilian Risk, Allocation, Volatility & Options Lab**
 
@@ -6,7 +6,27 @@
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 ![Research Use](https://img.shields.io/badge/Use-Research%20Only-lightgrey)
-![Status](https://img.shields.io/badge/Status-Premium%20Quant%2FRisk%20Prototype-blue)
+![Status](https://img.shields.io/badge/Status-Quant%20Risk%20Prototype-blue)
+
+## Run the full pipeline
+
+To regenerate the complete BRAVO Lab evidence package, run:
+
+```bash
+python scripts/run_pipeline.py
+```
+
+This command regenerates:
+
+* processed CSV evidence in `data/processed/`
+* visual figures in `reports/figures/`
+* markdown reports in `reports/`
+* the final executive PDF report
+* the test suite
+
+## Start Here
+
+BRAVO Lab includes a front-office report package for fast review.
 
 ## Start Here
 
