@@ -18,8 +18,8 @@ external_brazil_pressure,vix_pressure,56,0.1100196463654224
 external_brazil_pressure,global_equity_pressure,55,0.10805500982318271
 external_brazil_pressure,brazil_vol_pressure,21,0.0412573673870334
 fx_pressure,external_brazil_pressure,144,0.2807017543859649
-fx_pressure,brazil_drawdown_pressure,91,0.17738791423001948
-fx_pressure,vix_pressure,89,0.17348927875243664
+fx_pressure,brazil_drawdown_pressure,90,0.17543859649122806
+fx_pressure,vix_pressure,90,0.17543859649122806
 fx_pressure,global_equity_pressure,81,0.15789473684210525
 fx_pressure,brazil_vol_pressure,57,0.1111111111111111
 fx_pressure,fx_pressure,51,0.09941520467836257

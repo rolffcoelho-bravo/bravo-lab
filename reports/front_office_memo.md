@@ -4,20 +4,20 @@
 
 ### Decision read
 
-BRAVO Lab currently reads Brazilian risk through a BSTI score of **13.47**, classified as **Calm**, with **Brazil Drawdown Pressure** as the dominant pressure channel. The current BSTI policy action is **Passive Brazil Equity**.
+BRAVO Lab currently reads Brazilian risk through a BSTI score of **28.65**, classified as **Fragile**, with **Vix Pressure** as the dominant pressure channel. The current BSTI policy action is **Covered Call**.
 
-The model is not demanding an option overlay. The committee should still monitor whether stress is beginning to migrate into warning state.
+The model is prioritizing income capture. The committee should check whether the upside sold is acceptable under the current stress state.
 
 ### Portfolio action snapshot
 
 | Item | Current read |
 | --- | --- |
-| Current BSTI score | 13.47 |
-| Current BSTI regime | Calm |
-| Dominant pressure channel | Brazil Drawdown Pressure |
-| Current policy action | Passive Brazil Equity |
-| Dominant historical policy choice | Passive Brazil Equity (61.59%) |
-| BSTI policy annualized active return | 5.45% |
+| Current BSTI score | 28.65 |
+| Current BSTI regime | Fragile |
+| Dominant pressure channel | Vix Pressure |
+| Current policy action | Covered Call |
+| Dominant historical policy choice | Passive Brazil Equity (60.93%) |
+| BSTI policy annualized active return | 5.54% |
 | BSTI policy tracking error | 10.18% |
 | BSTI policy information ratio | 0.54 |
 | BSTI policy max drawdown | -25.01% |
@@ -29,9 +29,9 @@ The model is not demanding an option overlay. The committee should still monitor
 | Which strategy had the best information ratio? | Bsti Policy Overlay |
 | Which strategy had the best drawdown profile? | Collar |
 | Which strategy had the highest annualized return? | Bsti Policy Overlay |
-| How persistent are warning states? | Average warning duration: 1.88 observations |
+| How persistent are warning states? | Average warning duration: 1.89 observations |
 | How persistent are stress states? | Average stress duration: 1.71 observations |
-| How often do warnings escalate? | Warning-to-stress escalation rate: 24.17% |
+| How often do warnings escalate? | Warning-to-stress escalation rate: 24.14% |
 | Which BSTI calibration is strongest? | Balanced, 63d horizon, threshold 10.00, governance score 0.50 |
 
 ### Risk committee agenda
