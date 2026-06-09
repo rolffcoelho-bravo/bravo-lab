@@ -8,6 +8,15 @@
 ![Research Use](https://img.shields.io/badge/Use-Research%20Only-lightgrey)
 ![Status](https://img.shields.io/badge/Status-Premium%20Quant%2FRisk%20Prototype-blue)
 
+## Canonical public report
+
+`reports/BRAVO_Lab_Executive_Report_v0.1.2.pdf`
+
+## Full pipeline command
+
+~~~bash
+python scripts/run_pipeline.py
+~~~
 ## Start Here
 
 BRAVO Lab includes a front-office report package for fast review.
@@ -231,4 +240,5 @@ If you use this project, its code, methodology, diagnostics, research structure,
       type = {Python research software},
       url = {https://github.com/rolffcoelho-bravo/bravo-lab}
     }
+
 
