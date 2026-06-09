@@ -2,9 +2,9 @@
 
 **Subtitle:** Brazilian Equity Risk, Volatility Transmission, and Synthetic Protection Logic
 
-Generated at: **2026-06-08 23:23:37 UTC**
+Generated at: **2026-06-09 12:34:12 UTC**
 
-Data window: **2014-01-02 to 2026-06-08**
+Data window: **2014-01-02 to 2026-06-09**
 
 Target report length: **36 to 40 PDF pages**
 
@@ -12,20 +12,20 @@ Target report length: **36 to 40 PDF pages**
 
 ### Decision read
 
-BRAVO Lab currently reads Brazilian risk through a BSTI score of **29.83**, classified as **Fragile**, with **Fx Pressure** as the dominant pressure channel. The current BSTI policy action is **Covered Call**.
+BRAVO Lab currently reads Brazilian risk through a BSTI score of **13.47**, classified as **Calm**, with **Brazil Drawdown Pressure** as the dominant pressure channel. The current BSTI policy action is **Passive Brazil Equity**.
 
-The model is prioritizing income capture. The committee should check whether the upside sold is acceptable under the current stress state.
+The model is not demanding an option overlay. The committee should still monitor whether stress is beginning to migrate into warning state.
 
 ### Portfolio action snapshot
 
 | Item | Current read |
 | --- | --- |
-| Current BSTI score | 29.83 |
-| Current BSTI regime | Fragile |
-| Dominant pressure channel | Fx Pressure |
-| Current policy action | Covered Call |
-| Dominant historical policy choice | Passive Brazil Equity (60.93%) |
-| BSTI policy annualized active return | 5.54% |
+| Current BSTI score | 13.47 |
+| Current BSTI regime | Calm |
+| Dominant pressure channel | Brazil Drawdown Pressure |
+| Current policy action | Passive Brazil Equity |
+| Dominant historical policy choice | Passive Brazil Equity (61.59%) |
+| BSTI policy annualized active return | 5.45% |
 | BSTI policy tracking error | 10.18% |
 | BSTI policy information ratio | 0.54 |
 | BSTI policy max drawdown | -25.01% |
@@ -108,7 +108,7 @@ This memo is a decision-support layer, not an investment recommendation. The evi
 
 **Current regime:** `stress`
 
-**Latest realized volatility:** 16.40%
+**Latest realized volatility:** 16.15%
 
 **Latest drawdown:** -15.20%
 
@@ -220,7 +220,7 @@ machine learning.
 
 Latest classified regime: **stress**
 
-Latest realized volatility: **16.40%**
+Latest realized volatility: **16.15%**
 
 Latest drawdown: **-15.20%**
 
@@ -228,10 +228,10 @@ Latest drawdown: **-15.20%**
 
 | Regime | Observations | Share |
 | --- | ---: | ---: |
-| stress | 920 | 31.01% |
-| extreme_stress | 737 | 24.84% |
-| calm | 674 | 22.72% |
-| fragile | 334 | 11.26% |
+| stress | 921 | 31.03% |
+| extreme_stress | 737 | 24.83% |
+| calm | 674 | 22.71% |
+| fragile | 334 | 11.25% |
 | neutral | 302 | 10.18% |
 
 ## 7. Baseline Risk Metrics
@@ -242,11 +242,11 @@ overlay discussion is taking place in a calm, fragile, or stressed environment.
 
 | Asset | Ann. Return | Ann. Volatility | Sharpe | Sortino | Max Drawdown | VaR 95% | CVaR 95% | Obs. |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| brazil_equity | 9.92% | 23.14% | 0.525 | 0.686 | -46.93% | -2.21% | -3.28% | 3238 |
-| fx_usdbrl | 6.31% | 16.45% | 0.454 | 0.701 | -26.80% | -1.59% | -2.23% | 3238 |
-| brazil_external | 2.57% | 33.91% | 0.246 | 0.323 | -66.54% | -3.30% | -4.84% | 3238 |
-| global_equity | 13.30% | 16.92% | 0.823 | 0.985 | -33.72% | -1.60% | -2.59% | 3238 |
-| vix | 2.24% | 133.46% | 0.624 | 1.276 | -85.66% | -10.53% | -14.20% | 3238 |
+| brazil_equity | 9.92% | 23.14% | 0.525 | 0.686 | -46.93% | -2.21% | -3.28% | 3239 |
+| fx_usdbrl | 6.28% | 16.45% | 0.452 | 0.698 | -26.80% | -1.59% | -2.23% | 3239 |
+| brazil_external | 2.57% | 33.91% | 0.246 | 0.323 | -66.54% | -3.29% | -4.84% | 3239 |
+| global_equity | 13.30% | 16.92% | 0.823 | 0.985 | -33.72% | -1.60% | -2.59% | 3239 |
+| vix | 1.92% | 133.45% | 0.621 | 1.271 | -85.66% | -10.52% | -14.20% | 3239 |
 
 ## 8. Synthetic Overlay Results
 
@@ -338,11 +338,11 @@ from.
 
 | Date | Composite Stress Score | Stress Regime | Top Pressure 1 | Value 1 | Top Pressure 2 | Value 2 | Top Pressure 3 | Value 3 | Brazil Drawdown | Brazil 21D Vol | VIX Level |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-06-08 | 0.851 | fragile | fx_pressure | 2.525 | brazil_drawdown_pressure | 1.965 | external_brazil_pressure | 0.615 | -15.20% | 16.40% | 18.920 |
+| 2026-06-09 | 0.345 | calm | brazil_drawdown_pressure | 1.877 | global_equity_pressure | 0.191 | brazil_vol_pressure | 0.000 | -15.20% | 16.15% | 18.160 |
 
 ### Multi-Asset Stress Interpretation
 
-Multi-asset stress read: the latest composite stress score is `0.85`, classified as `fragile`. The strongest current pressure inputs are `fx_pressure`, `brazil_drawdown_pressure`, and `external_brazil_pressure`. This extends the framework beyond local price behavior and starts moving BRAVO Lab toward a broader Brazil stress transmission dashboard.
+Multi-asset stress read: the latest composite stress score is `0.34`, classified as `calm`. The strongest current pressure inputs are `brazil_drawdown_pressure`, `global_equity_pressure`, and `brazil_vol_pressure`. This extends the framework beyond local price behavior and starts moving BRAVO Lab toward a broader Brazil stress transmission dashboard.
 
 ## 11. Brazil Stress Transmission Index
 
@@ -358,20 +358,20 @@ where pressure is coming from.
 
 | Date | BSTI 0-100 | Raw Score | Regime | Stress Breadth | Active Channels | Dominant Channel | Dominant Value | Top Channel 1 | Value 1 | Top Channel 2 | Value 2 | Top Channel 3 | Value 3 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-06-08 | 29.827 | 0.895 | fragile | 0.333 | 2 | fx_pressure | 2.525 | fx_pressure | 2.525 | brazil_drawdown_pressure | 1.965 | external_brazil_pressure | 0.615 |
+| 2026-06-09 | 13.466 | 0.404 | calm | 0.167 | 1 | brazil_drawdown_pressure | 1.877 | brazil_drawdown_pressure | 1.877 | global_equity_pressure | 0.191 | brazil_vol_pressure | 0.000 |
 
 ### Historical BSTI Regime Distribution
 
 | BSTI Regime | Observations | Share |
 | --- | --- | --- |
-| calm | 1967 | 60.75% |
-| fragile | 989 | 30.54% |
+| calm | 1968 | 60.76% |
+| fragile | 989 | 30.53% |
 | stress | 224 | 6.92% |
 | extreme_stress | 58 | 1.79% |
 
 ### BSTI Interpretation
 
-BSTI read: the latest Brazil Stress Transmission Index is `29.8` out of 100, classified as `fragile`. Stress breadth is `0.33`, with `2` active pressure channels. The dominant pressure channel is `fx_pressure`. The top three channels are `fx_pressure`, `brazil_drawdown_pressure`, and `external_brazil_pressure`. This turns the multi-asset stress dashboard into a formal Brazil stress-transmission index that can be monitored, reported, and later tested against overlay decisions.
+BSTI read: the latest Brazil Stress Transmission Index is `13.5` out of 100, classified as `calm`. Stress breadth is `0.17`, with `1` active pressure channels. The dominant pressure channel is `brazil_drawdown_pressure`. The top three channels are `brazil_drawdown_pressure`, `global_equity_pressure`, and `brazil_vol_pressure`. This turns the multi-asset stress dashboard into a formal Brazil stress-transmission index that can be monitored, reported, and later tested against overlay decisions.
 
 ## 12. BSTI Threshold Validation
 
@@ -387,20 +387,20 @@ enough to support portfolio-governance discussion.
 
 | Horizon | BSTI Threshold | Obs. | Signal Obs. | Signal Freq. | Avg Return Signal On | Avg Return Signal Off | Avg Max DD Signal On | Avg Max DD Signal Off | Neg Return Precision | 5% DD Precision | 10% DD Precision | 5% DD Recall |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 21 | 15.000 | 3228 | 1263 | 39.13% | 0.73% | 1.23% | -5.98% | -4.74% | 44.81% | 48.14% | 10.61% | 43.80% |
-| 21 | 33.000 | 3228 | 281 | 8.71% | -0.50% | 1.18% | -8.09% | -4.95% | 45.55% | 58.01% | 22.06% | 11.74% |
-| 21 | 50.000 | 3228 | 58 | 1.80% | -1.17% | 1.07% | -9.96% | -5.14% | 44.83% | 62.07% | 31.03% | 2.59% |
-| 63 | 15.000 | 3228 | 1263 | 39.13% | 3.61% | 2.85% | -10.27% | -9.02% | 39.67% | 85.67% | 35.00% | 38.60% |
-| 63 | 33.000 | 3228 | 281 | 8.71% | 2.39% | 3.22% | -12.62% | -9.21% | 43.06% | 90.04% | 45.20% | 9.03% |
-| 63 | 50.000 | 3228 | 58 | 1.80% | 1.65% | 3.17% | -14.94% | -9.41% | 46.55% | 98.28% | 56.90% | 2.03% |
+| 21 | 15.000 | 3229 | 1263 | 39.11% | 0.73% | 1.23% | -5.98% | -4.74% | 44.81% | 48.14% | 10.61% | 43.80% |
+| 21 | 33.000 | 3229 | 281 | 8.70% | -0.50% | 1.18% | -8.09% | -4.95% | 45.55% | 58.01% | 22.06% | 11.74% |
+| 21 | 50.000 | 3229 | 58 | 1.80% | -1.17% | 1.07% | -9.96% | -5.14% | 44.83% | 62.07% | 31.03% | 2.59% |
+| 63 | 15.000 | 3229 | 1263 | 39.11% | 3.61% | 2.84% | -10.27% | -9.02% | 39.67% | 85.67% | 35.00% | 38.60% |
+| 63 | 33.000 | 3229 | 281 | 8.70% | 2.39% | 3.21% | -12.62% | -9.21% | 43.06% | 90.04% | 45.20% | 9.03% |
+| 63 | 50.000 | 3229 | 58 | 1.80% | 1.65% | 3.17% | -14.94% | -9.41% | 46.55% | 98.28% | 56.90% | 2.03% |
 
 ### Overlay Behavior When BSTI Is Elevated
 
 | BSTI Threshold | Strategy | Obs. | Avg Active Return | Annualized Active Return | Tracking Error | Information Ratio | Hit Rate | Best Active Period | Worst Active Period |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 15.000 | covered_call | 59 | 0.44% | 5.29% | 6.67% | 0.793 | 91.53% | 2.12% | -8.89% |
-| 15.000 | collar | 59 | 1.06% | 12.66% | 16.84% | 0.752 | 88.14% | 31.28% | -9.19% |
-| 15.000 | stress_aware_overlay | 59 | 0.64% | 7.69% | 15.96% | 0.482 | 49.15% | 31.28% | -8.89% |
+| 15.000 | covered_call | 58 | 0.43% | 5.16% | 6.73% | 0.767 | 91.38% | 2.12% | -8.89% |
+| 15.000 | collar | 58 | 1.07% | 12.78% | 16.98% | 0.753 | 87.93% | 31.28% | -9.19% |
+| 15.000 | stress_aware_overlay | 58 | 0.64% | 7.72% | 16.10% | 0.480 | 48.28% | 31.28% | -8.89% |
 | 33.000 | covered_call | 9 | 0.78% | 9.31% | 1.51% | 6.148 | 100.00% | 1.78% | 0.30% |
 | 33.000 | collar | 9 | 5.63% | 67.52% | 35.16% | 1.921 | 100.00% | 31.28% | 0.16% |
 | 33.000 | stress_aware_overlay | 9 | 3.81% | 45.68% | 35.75% | 1.278 | 44.44% | 31.28% | 0.00% |
@@ -425,25 +425,25 @@ structure is robust enough for portfolio-governance discussion.
 
 | Weight Scheme | Horizon | Threshold | Governance Score | Signal Freq. | 5% DD Precision | 5% DD Recall | Avg Max DD Signal On | Avg Max DD Signal Off | Obs. |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| local_risk_heavy | 21 | 50.000 | 0.343 | 3.59% | 70.69% | 5.91% | -10.56% | -5.02% | 3228 |
-| local_risk_heavy | 21 | 10.000 | 0.339 | 55.61% | 46.85% | 60.59% | -5.70% | -4.63% | 3228 |
-| balanced | 21 | 10.000 | 0.336 | 56.82% | 46.13% | 60.95% | -5.63% | -4.68% | 3228 |
-| fx_vix_heavy | 21 | 10.000 | 0.329 | 54.03% | 46.04% | 57.85% | -5.64% | -4.73% | 3228 |
-| global_risk_heavy | 21 | 10.000 | 0.325 | 50.81% | 46.52% | 54.97% | -5.71% | -4.72% | 3228 |
-| external_brazil_heavy | 21 | 10.000 | 0.324 | 54.71% | 45.36% | 57.71% | -5.64% | -4.72% | 3228 |
-| local_risk_heavy | 21 | 15.000 | 0.320 | 42.41% | 48.28% | 47.62% | -5.92% | -4.71% | 3228 |
-| external_brazil_heavy | 21 | 50.000 | 0.314 | 1.83% | 66.10% | 2.81% | -9.96% | -5.13% | 3228 |
-| balanced | 21 | 15.000 | 0.311 | 39.13% | 48.14% | 43.80% | -5.98% | -4.74% | 3228 |
-| local_risk_heavy | 21 | 40.000 | 0.308 | 7.53% | 61.32% | 10.73% | -8.49% | -4.96% | 3228 |
-| local_risk_heavy | 21 | 33.000 | 0.303 | 11.93% | 57.92% | 16.07% | -7.71% | -4.89% | 3228 |
-| external_brazil_heavy | 21 | 15.000 | 0.302 | 36.80% | 47.64% | 40.78% | -5.87% | -4.84% | 3228 |
+| local_risk_heavy | 21 | 50.000 | 0.343 | 3.59% | 70.69% | 5.91% | -10.56% | -5.02% | 3229 |
+| local_risk_heavy | 21 | 10.000 | 0.339 | 55.62% | 46.83% | 60.59% | -5.70% | -4.63% | 3229 |
+| balanced | 21 | 10.000 | 0.335 | 56.83% | 46.10% | 60.95% | -5.63% | -4.68% | 3229 |
+| fx_vix_heavy | 21 | 10.000 | 0.328 | 54.04% | 46.02% | 57.85% | -5.64% | -4.73% | 3229 |
+| global_risk_heavy | 21 | 10.000 | 0.325 | 50.82% | 46.50% | 54.97% | -5.71% | -4.72% | 3229 |
+| external_brazil_heavy | 21 | 10.000 | 0.324 | 54.72% | 45.33% | 57.71% | -5.64% | -4.72% | 3229 |
+| local_risk_heavy | 21 | 15.000 | 0.320 | 42.43% | 48.25% | 47.62% | -5.92% | -4.71% | 3229 |
+| external_brazil_heavy | 21 | 50.000 | 0.314 | 1.83% | 66.10% | 2.81% | -9.96% | -5.13% | 3229 |
+| balanced | 21 | 15.000 | 0.311 | 39.11% | 48.14% | 43.80% | -5.98% | -4.74% | 3229 |
+| local_risk_heavy | 21 | 40.000 | 0.308 | 7.53% | 61.32% | 10.73% | -8.49% | -4.96% | 3229 |
+| local_risk_heavy | 21 | 33.000 | 0.303 | 11.92% | 57.92% | 16.07% | -7.71% | -4.89% | 3229 |
+| external_brazil_heavy | 21 | 15.000 | 0.302 | 36.79% | 47.64% | 40.78% | -5.87% | -4.84% | 3229 |
 
 ### Best Calibration by Horizon
 
 | Horizon | Weight Scheme | Threshold | Governance Score | Signal Freq. | 5% DD Precision | 5% DD Recall | Selection Rule |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 21 | local_risk_heavy | 50.000 | 0.343 | 3.59% | 70.69% | 5.91% | max_governance_score |
-| 63 | balanced | 10.000 | 0.503 | 56.82% | 86.48% | 56.58% | max_governance_score |
+| 63 | balanced | 10.000 | 0.503 | 56.83% | 86.43% | 56.58% | max_governance_score |
 
 ### Calibration Interpretation
 
@@ -469,8 +469,8 @@ covered calls, collars, and the existing local-regime stress-aware overlay.
 | Selected Strategy | Obs. | Share | Avg BSTI | Avg Selected Return | Avg Passive Return | Avg Active Return | Positive Active Rate |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | collar | 9 | 5.96% | 51.053 | -3.20% | -8.83% | 5.63% | 100.00% |
-| covered_call | 50 | 33.11% | 22.048 | -0.71% | -1.09% | 0.38% | 90.00% |
-| passive_brazil_equity | 92 | 60.93% | 7.257 | 3.11% | 3.11% | 0.00% | 0.00% |
+| covered_call | 49 | 32.45% | 21.890 | -0.72% | -1.09% | 0.37% | 89.80% |
+| passive_brazil_equity | 93 | 61.59% | 7.323 | 3.06% | 3.06% | 0.00% | 0.00% |
 
 ### Policy Performance Comparison
 
@@ -480,11 +480,11 @@ covered calls, collars, and the existing local-regime stress-aware overlay.
 | covered_call | 9.22% | 16.80% | -36.79% | -2.87% | 10.33% | -0.278 | 74.83% | 151 |
 | collar | 5.92% | 10.23% | -21.49% | -6.16% | 14.82% | -0.416 | 69.54% | 151 |
 | stress_aware_overlay | 7.52% | 13.62% | -23.01% | -4.57% | 13.62% | -0.335 | 44.37% | 151 |
-| bsti_policy_overlay | 17.62% | 17.66% | -25.01% | 5.54% | 10.18% | 0.544 | 35.76% | 151 |
+| bsti_policy_overlay | 17.54% | 17.67% | -25.01% | 5.45% | 10.18% | 0.535 | 35.10% | 151 |
 
 ### Policy Interpretation
 
-BSTI policy read: the BSTI-driven policy most often selected `passive_brazil_equity`. Its annualized active return is `5.54%` with tracking error `10.18%` and information ratio `0.54`. This turns BSTI from a dashboard into a governable overlay-selection rule that can be compared against passive exposure, covered calls, collars, and the local-regime stress-aware overlay.
+BSTI policy read: the BSTI-driven policy most often selected `passive_brazil_equity`. Its annualized active return is `5.45%` with tracking error `10.18%` and information ratio `0.54`. This turns BSTI from a dashboard into a governable overlay-selection rule that can be compared against passive exposure, covered calls, collars, and the local-regime stress-aware overlay.
 
 ## 15. BSTI Signal Persistence and State Transitions
 
@@ -507,15 +507,15 @@ pressure-channel rotation.
 | stress | normal | 27 | 9.57% |
 | stress | stress | 117 | 41.49% |
 | stress | warning | 138 | 48.94% |
-| warning | normal | 421 | 42.61% |
-| warning | stress | 103 | 10.43% |
-| warning | warning | 464 | 46.96% |
+| warning | normal | 422 | 42.67% |
+| warning | stress | 103 | 10.41% |
+| warning | warning | 464 | 46.92% |
 
 ### BSTI State Duration Summary
 
 | State | Episodes | Avg Duration | Median Duration | Max Duration | Avg BSTI | Max BSTI |
 | --- | --- | --- | --- | --- | --- | --- |
-| normal | 449 | 4.381 | 2.000 | 46.000 | 8.373 | 14.998 |
+| normal | 450 | 4.373 | 2.000 | 46.000 | 8.385 | 14.998 |
 | warning | 525 | 1.884 | 1.000 | 15.000 | 21.475 | 32.983 |
 | stress | 165 | 1.709 | 1.000 | 24.000 | 41.687 | 99.514 |
 

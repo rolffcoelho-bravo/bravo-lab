@@ -5,6 +5,6 @@ normal,warning,387,0.1967463141840366,normal -> warning
 stress,normal,27,0.09574468085106383,stress -> normal
 stress,stress,117,0.4148936170212766,stress -> stress
 stress,warning,138,0.48936170212765956,stress -> warning
-warning,normal,421,0.42611336032388664,warning -> normal
-warning,stress,103,0.10425101214574899,warning -> stress
-warning,warning,464,0.46963562753036436,warning -> warning
+warning,normal,422,0.42669362992922144,warning -> normal
+warning,stress,103,0.10414560161779575,warning -> stress
+warning,warning,464,0.4691607684529828,warning -> warning

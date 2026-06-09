@@ -106,7 +106,7 @@ bravo-lab/
 |-- notebooks/
 |-- reports/
 |   |-- figures/
-|   `-- nu_asset_application_note.md
+|   `-- financial_sector_application_note.md
 |-- src/
 |   `-- bravo/
 |-- Makefile

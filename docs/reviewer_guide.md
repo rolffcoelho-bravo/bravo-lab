@@ -6,7 +6,7 @@ This guide is written for a technical reviewer, portfolio researcher, or asset-m
 
 1. `README.md` for the project overview.
 2. `docs/methodology.md` for the research design.
-3. `reports/nu_asset_application_note.md` for the role-relevance explanation.
+3. `reports/financial_sector_application_note.md` for the role-relevance explanation.
 4. `src/bravo/` for the planned implementation structure.
 
 ## What this repository is trying to prove

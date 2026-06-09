@@ -4,20 +4,20 @@
 
 ### Decision read
 
-BRAVO Lab currently reads Brazilian risk through a BSTI score of **29.83**, classified as **Fragile**, with **Fx Pressure** as the dominant pressure channel. The current BSTI policy action is **Covered Call**.
+BRAVO Lab currently reads Brazilian risk through a BSTI score of **13.47**, classified as **Calm**, with **Brazil Drawdown Pressure** as the dominant pressure channel. The current BSTI policy action is **Passive Brazil Equity**.
 
-The model is prioritizing income capture. The committee should check whether the upside sold is acceptable under the current stress state.
+The model is not demanding an option overlay. The committee should still monitor whether stress is beginning to migrate into warning state.
 
 ### Portfolio action snapshot
 
 | Item | Current read |
 | --- | --- |
-| Current BSTI score | 29.83 |
-| Current BSTI regime | Fragile |
-| Dominant pressure channel | Fx Pressure |
-| Current policy action | Covered Call |
-| Dominant historical policy choice | Passive Brazil Equity (60.93%) |
-| BSTI policy annualized active return | 5.54% |
+| Current BSTI score | 13.47 |
+| Current BSTI regime | Calm |
+| Dominant pressure channel | Brazil Drawdown Pressure |
+| Current policy action | Passive Brazil Equity |
+| Dominant historical policy choice | Passive Brazil Equity (61.59%) |
+| BSTI policy annualized active return | 5.45% |
 | BSTI policy tracking error | 10.18% |
 | BSTI policy information ratio | 0.54 |
 | BSTI policy max drawdown | -25.01% |
