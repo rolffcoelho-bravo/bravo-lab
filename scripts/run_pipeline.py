@@ -123,6 +123,8 @@ def main() -> int:
 
     print()
     print("Git working tree remains clean after full pipeline run.")
+    print("\nOpening final PDF report...")
+    open_final_pdf()
     return 0
 
 
