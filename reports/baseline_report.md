@@ -2,7 +2,7 @@
 
 **Subtitle:** Brazilian Equity Risk, Volatility Transmission, and Synthetic Protection Logic
 
-Generated at: **2026-06-09 18:08:22 UTC**
+Generated at: **2026-06-09 18:18:04 UTC**
 
 Data window: **2014-01-02 to 2026-06-09**
 
@@ -12,7 +12,7 @@ Target report length: **36 to 40 PDF pages**
 
 ### Decision read
 
-BRAVO Lab currently reads Brazilian risk through a BSTI score of **22.23**, classified as **Fragile**, with **Brazil Drawdown Pressure** as the dominant pressure channel. The current BSTI policy action is **Covered Call**.
+BRAVO Lab currently reads Brazilian risk through a BSTI score of **22.27**, classified as **Fragile**, with **Brazil Drawdown Pressure** as the dominant pressure channel. The current BSTI policy action is **Covered Call**.
 
 The model is prioritizing income capture. The committee should check whether the upside sold is acceptable under the current stress state.
 
@@ -20,7 +20,7 @@ The model is prioritizing income capture. The committee should check whether the
 
 | Item | Current read |
 | --- | --- |
-| Current BSTI score | 22.23 |
+| Current BSTI score | 22.27 |
 | Current BSTI regime | Fragile |
 | Dominant pressure channel | Brazil Drawdown Pressure |
 | Current policy action | Covered Call |
@@ -108,9 +108,9 @@ This memo is a decision-support layer, not an investment recommendation. The evi
 
 **Current regime:** `stress`
 
-**Latest realized volatility:** 16.43%
+**Latest realized volatility:** 16.41%
 
-**Latest drawdown:** -14.70%
+**Latest drawdown:** -14.73%
 
 **Decision bias:** Protection bias. The current signal gives more weight to drawdown control than to full upside capture. The strongest drawdown profile is currently `collar`. The strongest risk-adjusted profile is currently `collar`.
 
@@ -220,9 +220,9 @@ machine learning.
 
 Latest classified regime: **stress**
 
-Latest realized volatility: **16.43%**
+Latest realized volatility: **16.41%**
 
-Latest drawdown: **-14.70%**
+Latest drawdown: **-14.73%**
 
 ### Regime Distribution
 
@@ -272,9 +272,9 @@ annualized using **12.0 periods per year**.
 
 | Strategy | Ann. Return | Ann. Volatility | Sharpe | Max Drawdown | Best Period | Worst Period | Obs. |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| passive_brazil_equity | 9.98% | 22.24% | 0.546 | -37.77% | 21.22% | -35.92% | 151 |
-| covered_call | 7.97% | 16.80% | 0.552 | -36.79% | 10.57% | -35.16% | 151 |
-| collar | 5.59% | 10.22% | 0.584 | -21.49% | 4.11% | -4.76% | 151 |
+| passive_brazil_equity | 9.98% | 22.24% | 0.545 | -37.77% | 21.22% | -35.92% | 151 |
+| covered_call | 7.97% | 16.80% | 0.551 | -36.79% | 10.57% | -35.16% | 151 |
+| collar | 5.58% | 10.22% | 0.584 | -21.49% | 4.11% | -4.76% | 151 |
 | stress_aware_overlay | 6.84% | 13.62% | 0.555 | -23.01% | 10.58% | -14.33% | 151 |
 
 ## 9. Active Risk Diagnostics
@@ -338,7 +338,7 @@ from.
 
 | Date | Composite Stress Score | Stress Regime | Top Pressure 1 | Value 1 | Top Pressure 2 | Value 2 | Top Pressure 3 | Value 3 | Brazil Drawdown | Brazil 21D Vol | VIX Level |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-06-09 | 0.642 | fragile | brazil_drawdown_pressure | 1.775 | global_equity_pressure | 1.127 | vix_pressure | 0.952 | -14.70% | 16.43% | 20.320 |
+| 2026-06-09 | 0.643 | fragile | brazil_drawdown_pressure | 1.780 | global_equity_pressure | 1.135 | vix_pressure | 0.945 | -14.73% | 16.41% | 20.310 |
 
 ### Multi-Asset Stress Interpretation
 
@@ -358,7 +358,7 @@ where pressure is coming from.
 
 | Date | BSTI 0-100 | Raw Score | Regime | Stress Breadth | Active Channels | Dominant Channel | Dominant Value | Top Channel 1 | Value 1 | Top Channel 2 | Value 2 | Top Channel 3 | Value 3 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-06-09 | 22.227 | 0.667 | fragile | 0.500 | 3 | brazil_drawdown_pressure | 1.775 | brazil_drawdown_pressure | 1.775 | global_equity_pressure | 1.127 | vix_pressure | 0.952 |
+| 2026-06-09 | 22.270 | 0.668 | fragile | 0.500 | 3 | brazil_drawdown_pressure | 1.780 | brazil_drawdown_pressure | 1.780 | global_equity_pressure | 1.135 | vix_pressure | 0.945 |
 
 ### Historical BSTI Regime Distribution
 
@@ -371,7 +371,7 @@ where pressure is coming from.
 
 ### BSTI Interpretation
 
-BSTI read: the latest Brazil Stress Transmission Index is `22.2` out of 100, classified as `fragile`. Stress breadth is `0.50`, with `3` active pressure channels. The dominant pressure channel is `brazil_drawdown_pressure`. The top three channels are `brazil_drawdown_pressure`, `global_equity_pressure`, and `vix_pressure`. This turns the multi-asset stress dashboard into a formal Brazil stress-transmission index that can be monitored, reported, and later tested against overlay decisions.
+BSTI read: the latest Brazil Stress Transmission Index is `22.3` out of 100, classified as `fragile`. Stress breadth is `0.50`, with `3` active pressure channels. The dominant pressure channel is `brazil_drawdown_pressure`. The top three channels are `brazil_drawdown_pressure`, `global_equity_pressure`, and `vix_pressure`. This turns the multi-asset stress dashboard into a formal Brazil stress-transmission index that can be monitored, reported, and later tested against overlay decisions.
 
 ## 12. BSTI Threshold Validation
 
@@ -469,7 +469,7 @@ covered calls, collars, and the existing local-regime stress-aware overlay.
 | Selected Strategy | Obs. | Share | Avg BSTI | Avg Selected Return | Avg Passive Return | Avg Active Return | Positive Active Rate |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | collar | 9 | 5.96% | 51.053 | -3.20% | -8.83% | 5.63% | 100.00% |
-| covered_call | 50 | 33.11% | 21.896 | -0.70% | -1.08% | 0.38% | 90.00% |
+| covered_call | 50 | 33.11% | 21.897 | -0.70% | -1.08% | 0.38% | 90.00% |
 | passive_brazil_equity | 92 | 60.93% | 7.257 | 3.11% | 3.11% | 0.00% | 0.00% |
 
 ### Policy Performance Comparison
@@ -477,7 +477,7 @@ covered calls, collars, and the existing local-regime stress-aware overlay.
 | Strategy | Ann. Return | Ann. Vol. | Max DD | Ann. Active | Tracking Error | Info. Ratio | Hit Rate | Obs. |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | passive_brazil_equity | 12.13% | 22.24% | -37.77% | 0.00% | 0.00% | NA | 0.00% | 151 |
-| covered_call | 9.27% | 16.80% | -36.79% | -2.87% | 10.33% | -0.278 | 74.83% | 151 |
+| covered_call | 9.26% | 16.80% | -36.79% | -2.87% | 10.33% | -0.278 | 74.83% | 151 |
 | collar | 5.97% | 10.22% | -21.49% | -6.16% | 14.82% | -0.416 | 69.54% | 151 |
 | stress_aware_overlay | 7.56% | 13.62% | -23.01% | -4.57% | 13.62% | -0.335 | 44.37% | 151 |
 | bsti_policy_overlay | 17.67% | 17.66% | -25.01% | 5.54% | 10.18% | 0.544 | 35.76% | 151 |
