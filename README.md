@@ -24,6 +24,15 @@ This command regenerates:
 * the final executive PDF report
 * the test suite
 
+## Canonical public report
+
+`reports/BRAVO_Lab_Executive_Report_v0.1.2.pdf`
+
+## Full pipeline command
+
+~~~bash
+python scripts/run_pipeline.py
+~~~
 ## Start Here
 
 BRAVO Lab includes a front-office report package for fast review.
@@ -122,7 +131,7 @@ bravo-lab/
 |-- notebooks/
 |-- reports/
 |   |-- figures/
-|   `-- nu_asset_application_note.md
+|   `-- financial_sector_application_note.md
 |-- src/
 |   `-- bravo/
 |-- Makefile
@@ -247,4 +256,5 @@ If you use this project, its code, methodology, diagnostics, research structure,
       type = {Python research software},
       url = {https://github.com/rolffcoelho-bravo/bravo-lab}
     }
+
 
