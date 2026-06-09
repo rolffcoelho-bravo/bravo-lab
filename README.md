@@ -28,10 +28,6 @@ This command regenerates:
 
 BRAVO Lab includes a front-office report package for fast review.
 
-## Start Here
-
-BRAVO Lab includes a front-office report package for fast review.
-
 | Entry point | Purpose |
 | --- | --- |
 | [`reports/front_office_memo.md`](reports/front_office_memo.md) | Short portfolio-governance memo for PMs, risk committees, allocators, and reviewers |
